@@ -1,0 +1,168 @@
+\documentclass{article}
+
+\usepackage{amssymb, amsmath, latexsym, array, morefloats, epsfig, rotating, graphicx}
+\usepackage{subfigure, url, mathtools, enumerate, wasysym, threeparttable, lscape}
+\usepackage{natbib,color}
+\usepackage{bm, bbm,epstopdf}
+\usepackage{xr, zref, hyperref}
+
+\title{A Short Explanation of Hamiltonian Monte Carlo}
+\author{Matt Simpson}
+\begin{document}
+\maketitle
+
+\section{Introduction}
+This document is a short high level explanation of Hamiltonian Monte Carlo (HMC) for myself. It should be useful for a Stan talk I plan to give to the Spatio-Temporal Working Group. It has been organized into an outline with short, bite sized chunks.
+
+Useful videos: 
+\begin{itemize}
+\item HMC: \url{https://www.youtube.com/watch?v=pHsuIaPbNbY}
+\item Stan: \url{https://www.youtube.com/watch?v=xWQpEAyI5s8}
+\item Everything you should have learned about MCMC : 
+(about 1 hour)
+\end{itemize}
+
+\section{Hamiltonian Monte Carlo in Theory}
+HMC is a specific class of auxillary variable Markov chain Monte Carlo (MCMC) algorithms. Suppose we wish to sample from the probability density $\pi(\bm{q})$, e.g. a Baysian posterior density. A MCMC algorithm constructs a Markov chain with transition density $t(\bm{q}'|\bm{q})$ such that $\bm{q}^{(k)}$ converges in distribution to $\pi(\bm{q})$ as $k\to \infty$. Auxillary variable methods expand the parameter space to include some extra variable $\bm{p}$ with joint density $\pi(\bm{q},\bm{p})$, then construct a Markov chain for $(\bm{q}, \bm{p})$ jointly. HMC constructs $\bm{p}$ in a very special way.
+
+\subsection{HMC definition}
+
+Suppose that $\pi(\bm{q}) > 0$ for all $\bm{q} \in \Re^n$, and write $\pi(\bm{q}) = e^{-V(\bm{q})}$. Then construct the conditional auxillary variable density $\pi(\bm{p}|\bm{q}) = e^{-T(\bm{q},\bm{p})}$ with $\pi(\bm{p}|\bm{q}) > 0$ for all $\bm{q}, \bm{p} \in Re^n$. Then the joint density is $\pi(\bm{q}, \bm{p}) = e^{-H(\bm{q}, \bm{p})}$ where $H(\bm{q}, \bm{p}) = V(\bm{q}) + T(\bm{q}, \bm{p})$.
+
+The function $H(\bm{q}, \bm{p})$ is called a \emph{Hamiltonian} with \emph{position} vector $\bm{q}$ and \emph{momentum} vector $\bm{p}$. The function $T(\bm{q}, \bm{p})$ is called the \emph{kinetic energy} while $V(\bm{q})$ is called the \emph{potential energy}. The Hamiltonian corresponds to the total energy of the system. The Hamiltonian evolution in time of the system of positions and momenta that conserves total energy is defined by $2n$ ordinary differntial equations given by Hamilton's equations:
+\begin{align*}
+\frac{\mathrm{d}\bm{p}}{\mathrm{d} t} = - \frac{\partial H}{\partial \bm{q}}; && \frac{\mathrm{d}\bm{q}}{\mathrm{d} t} = + \frac{\partial H}{\partial \bm{p}}.
+\end{align*}
+The theoretical HMC transition density $t(\bm{q}^{(k+1)}, \bm{p}^{(k+1)}| \bm{q}^{(k)}, \bm{p}^{(k)})$ can then be sampled from as follows:
+\begin{enumerate}
+\item Sample $\bm{p}' \sim \pi(\bm{p}|\bm{q}^{(k)})$.
+\item Run the Hamiltonian evolution forward in time from $(\bm{q}^{(k)}, \bm{p}')$ for some amount of time to obtain $(\bm{q}^{(k+1)}, \bm{p}^{(k+1)})$.
+\end{enumerate}
+Note that the theoretical HMC algorithm accepts 100\% of the time. Graphically, you can picture this algorithm as a two step process: 1) a random walk step on the level sets of $\pi(\bm{p}, \bm{q})$, then 2) a deterministic step that moves around the level set according to the Hamiltonian evolution. <insert picture from the optimal integration time paper>
+
+\section{Hamiltonian Monte Carlo in Practice}
+In practice, the theoretical algorithm's performance depends on two things: the kinetic energy $T(\bm{q}, \bm{p})$, and how far forward in time the Hamiltonian evolution is compted. A good kinetic energy allows the Markov chain to move around level sets more quickly and efficiently (think a well-tuned random walk). When the kinetic energy is well chosen, the performance of the algorithm depends on how long the Hamiltonian evolution is run. Running the Hamiltonian evolution for too short of a time results in highly autocorrelated Markov chains. Running it longer leads to much better chains, but in practice this comes at a higher computational cost so there is a trade-off.
+
+In fact, this is the third component of HMC in practice: the Hamiltonian evolution is almost never analytically tractable, so it must be approximated using numerical integration methods. This, in turn, requires a Metropolis correction, along with some constraints on the kinetic energy and tweaks to the basic algorithm in order to ensure that the HMC-Metropolis algorithm has the right stationary distribution.
+
+In practice, the HMC algorithm as actually implemented is as follows:
+\begin{enumerate}
+\item Sample $\bm{p}' \sim \pi(\bm{p}|\bm{q}^{(k)})$.
+\item Approximate running the Hamiltonian evolution forward in time from $(\bm{q}^{(k)}, \bm{p}')$ for some amount of time to obtain $(\bm{q}'', \bm{p}'')$.
+\item Apply necessary tweaks to ensure the algorithm has the right stationary density to obtain proposal $(\bm{q}^{(prop)}, \bm{p}^{(prop)})$ (commonly set $\bm{p}^{(prop)} = -\bm{p}''$ \& $\bm{q}^{(prop)} = \bm{q}''$, but it depends on the approximation \& kinetic energy).
+\item Compute the Metropolis ratio and accept $\bm{q}^{(k+1)} = \bm{q}^{(prop)}$ or reject and set $\bm{q}^{(k+1)}=\bm{q}^{(k)}$ as usual.
+\end{enumerate}
+
+A good HMC algorithm will accept a high percentage of the time (80\% or more) and the traceplots will look nearly iid. The computational cost per iteration is often higher than a good Gibbs sampler, but the often near-perfect mixing typically more than makes up for that. To construct an HMC algorithm for your model, you need the following:
+\begin{enumerate}
+\item No discrete parameters. If you have discrete parameters, integrate them out. \label{nodiscrete}
+\item No constrained parameters. If you have constrained parameters, transform to the unconstrained space. \label{noconstraints}
+\item A function for computing the log density of the unconstrained parameters. \label{logdens}
+\item A function for computing the gradient of the log density. \label{logdensgrad}
+\item Functions for computing higher order derivatives for some exotic HMC variants. \label{higherorderderiv}
+\item Choose a good kinetic energy. \label{kinetic}
+\item Choose a good Hamiltonian approximation. \label{hamapprox}
+\item Choose a good integration time. \label{inttime}
+\end{enumerate}
+Many of these are hard. Stan allows you to do \eqref{logdens} straightforwardly with a modeling language similar to BUGS or JAGS. It handles \eqref{noconstraints} by allowing you to specify constraints on parameters, then it transforms for you. Unfortunately, you still must do \eqref{nodiscrete} on your own, but for many problems it is not too hard. The big innovation in Stan is an autodifferentiation package that numerically computes the gradient for you, accomplishing \eqref{logdensgrad}, and the developers are currently working on \eqref{higherorderderiv}. Stan also has an adaptive phase that chooses the kinetic energy, Hamiltonian approximation, and integration time in concert, depending on your target density, making \eqref{kinetic}--\eqref{inttime} straightforward. Stan exposes some knobs of this adaptation process and the developers have worked on useful diagnostics for evaluating how well an HMC algorithm is working, so you can play with these things to improve the efficiency of your sampler. For many common problems the default settings work great.
+
+\section{Working with Stan}
+Because of the nature of HMC and the specifics of how Stan is implemented, there are various things you can do in order to make Stan run faster or construct better HMC algorithms. All of these are documented in better detail in the manual, but I'll briefly mention all of them. See also this brief guide to Stan's warnings \url{http://mc-stan.org/misc/warnings.html}.
+
+\subsection{Center and Scale Your Data}
+This is the number one piece of advice I have for implementing things in Stan. Because of how HMC works, Stan can be dramatically faster when you center and scale your response and any covariates. Everything else in this section I would say is more for advanced users who are trying to fit more complex models in Stan. But even for simple models, centering and scaling your data can dramatically speed up Stan.
+
+For example, consider the simple regression model
+\begin{align*}
+\bm{y} \sim \mathrm{N}(\bm{X}\bm{\beta}, \sigma^2\bm{\mathrm{I}})
+\end{align*}
+If the scales of the columns of $\bm{X}$ are drastically different, this can make Stan very slow. But consider the equivalent model
+\begin{align*}
+\widetilde{\bm{y}} \sim \mathrm{N}(\widetilde{\bm{X}}\widetilde{\bm{\beta}}, \sigma^2\bm{\mathrm{I}})
+\end{align*}
+where $\widetilde{\bm{y}} = (\bm{y} - \overline{y})/\mathrm{SD}(\bm{y})$, and for the $j$th column of $\widetilde{\bm{X}}$, $\widetilde{\bm{x}}_j = (\bm{x}_j - \overline{x}_j)/\mathrm{SD}(\bm{x}_j)$, $j=2,3,\dots,p$ where $\bm{X}$ has $p$ columns, and the first column corresponds to the intercept term. This model will gives the same inferences about each $\beta_j = \widetilde{\beta}_j\mathrm{SD}(y)/\mathrm{SD}(x_j)$, $j=2,3,\dots,p$, and similarly for $\beta_1$, which is a more complex function of the means and sds of $\bm{y}$, the $\bm{x}_j$s, and of $\widetilde{\beta}_1$. 
+
+\subsection{Center and Scale Your Parameters}
+For similar reasons it can be a good idea to center and scale your parameters, especially parameters that have normal conditional distributions. For example, consider the following model written in terms of the \emph{centered parameterization}:
+\begin{align*}
+y &\sim \mathrm{N}(\lambda, \tau^2), &&& \lambda &\sim \mathrm{N}(\mu, \sigma^2).
+\end{align*}
+An alternative is the \emph{noncentered parameterization}:
+\begin{align*}
+y &\sim \mathrm{N}(\mu + \sigma\widetilde{\lambda}, \tau^2), &&& \widetilde{\lambda} &\sim \mathrm{N}(0, 1).
+\end{align*}
+These models are equivalent with $\lambda = \mu + \sigma\widetilde{\lambda}$, but often the noncentered parameterization will result in faster HMC algorithms. And sometimes the opposite is true. The basic intuition both here is the same as for Gibbs samplers: the more information you have from the data about the parameter, the more likely the centered parameterization is optimal, but the less information you have the more likely the noncentered parameterization is optimal.
+
+\subsection{Other Reparameterizations}
+In general, Stan and HMC more generally can have trouble with certain complex geometries in the target distribution. To fully understand this stuff you need differential geometry, but there are some more rules of thumb. For example, HMC can have trouble with fat tails, so reparameterization can help there. Some examples (not just fat tails):
+\begin{enumerate}
+\item Use the gamma-normal mixture representation of the student's $t$ distribution.
+\item Use the normal distribution on logs instead of the lognormal distribution.
+\item Use the Cholesky factor of a covariance matrix instead of directly using the covariance matrix.
+\end{enumerate}
+
+\subsection{Vectorize and Looping Concerns}
+Stan is written in \verb0C++\verb0 and loops are very fast. Stan has also been vectorized so that the following two model definitions are equivalent:
+\begin{verbatim}
+data{
+  vector[N] y;
+}
+parameters{
+  real mu;
+  real<lower = 0> sigma;
+}
+model{
+  y ~ normal(mu, sigma);
+  mu ~ normal(0.0, 10.0);
+  sigma ~ normal(0.0, 10.0); // half-normal prior w/ constraint above
+}
+\end{verbatim}
+and
+\begin{verbatim}
+data{
+  vector[N] y;
+}
+parameters{
+  real mu;
+  real<lower = 0> sigma;
+}
+model{
+  for(n in 1:N){
+    y[n] ~ normal(mu, sigma);
+  }
+  mu ~ normal(0.0, 10.0);
+  sigma ~ normal(0.0, 10.0); // half-normal prior w/ constraint above
+}
+\end{verbatim}
+Stan does not care which of the two ways you write this model, so you might think that using \verb0C++0's blazing fast for loops is the way to go. However, because of how the autodifferention package works, the opposite is true. Using for loops means computing the log density will be faster, but vectorizing means computing the gradient of the log density will be faster, and this latter computation is usually the largest computational bottleneck. So vectorize whenever possible if you are fitting a complex model. 
+
+If you have to use loops, there are some tricks you can use. In Stan, matrices are stored in column-major order, so it's faster to loop over columns first (i.e. more slowly). For example
+\begin{verbatim}
+for(c in 1:ncol){
+  for(r in 1:nrow){
+    x[r, c] = // some stuff
+  }
+}
+\end{verbatim}
+
+Also some things are faster when working with arrays than with vectors or matrices and vice versa. Read the manual!
+
+\subsection{Sufficient Statistics}
+When possible, parameterize distributions in terms of sufficient statistics instead of the underlying data or parameters. This should speed things up. For example instead of
+\begin{align*}
+y_i &\stackrel{iid}{\sim}\mathrm{Ber}(p) \mbox{ for } i=1,2,\dots,N\\
+\intertext{use}
+z = \sum_{i=1}^Ny_i &\sim \mathrm{Bin}(N, p).
+\end{align*}
+
+\subsection{Exploit Conjugacy}
+If $y\sim[y|\phi]$ with $\phi\sim[\phi]$ but $[\phi|y]$ is known, use $\phi \sim [\phi|y]$ instead. For example insetad of
+\begin{verbatim}
+y ~ bin(n, theta);
+theta ~ beta(a, b);
+\end{verbatim}
+use
+\begin{verbatim}
+theta ~ beta(a + sum(y), b + n - sum(y));
+\end{verbatim}
+\end{document}
