@@ -22,7 +22,7 @@ epsfig, multicol, amsthm}
 \setbeamercovered{transparent=0}
 \beamertemplatenavigationsymbolsempty
 
-\title[Stan for Spatial]{Using Stan for Spatial and Spatio-Temporal Modeling}
+\title[Stan for Spatial]{Introduction to Stan for Markov Chain Monte Carlo}
 
 %\subtitle{}
 \author[Matt Simpson]{Matthew Simpson}
@@ -33,6 +33,12 @@ epsfig, multicol, amsthm}
 \begin{frame}
 \titlepage
 \end{frame}
+
+% \begin{frame}[fragile]
+% \frametitle{Abstract}
+% \centering
+% In the first part of this talk I introduce Hamiltonian Monte Carlo (HMC) and its implementation in Stan. The focus is on building intuition and not on theory, e.g. for how HMC works, how Stan solves many of the problems typically associated with implementing HMC, and for why HMC and Stan are attractive alternatives to Gibbs based sampling algorithms. In the second part of the talk, I provide a brief introduction to using Stan with the \verb0rstan0 \verb0R0 package. I provide several examples in this portion of the talk, guidance for interpreting Stan's warning and error messages, and intuition for how to construct better HMC samplers using Stan.
+% \end{frame}
 
 \begin{frame}
 \frametitle{Stan is...}
@@ -62,7 +68,7 @@ epsfig, multicol, amsthm}
 
 \vspace{0.2cm}
 
-\item[] A \textbf{probabilistic programming language} that implements {\color{red}\textbf{Hamiltonian Monte Carlo (HMC)}}, variational Bayes, and penalized maximum likelihood estimation.\\
+\item[] A \textbf{probabilistic programming language} that implements {\color{red}\textbf{Hamiltonian Monte Carlo (HMC)}}, variational Bayes, and (penalized) maximum likelihood estimation.\\
 
 \vspace{0.2cm}
 
@@ -166,7 +172,7 @@ To implement HMC for a differentiable target $\pi(\bm{q})$ you need:
 \item Choose a kinetic energy, i.e. $\pi(\bm{p}|\bm{q})$.
 \begin{itemize}
 \item Stan: $\mathrm{N}(\bm{0}, \bm{M})$ and tune $\bm{M}$ during warmup. (Typical HMC)
-\item More intelligent: $\bm{M}(\bm{q})$. (Riemannian HMC; future Stan)
+\item More intelligent: $\bm{M}(\bm{q})$. (Riemannian HMC; future Stan?)
 \end{itemize}
 \end{enumerate}
 \begin{align*}
@@ -207,9 +213,14 @@ To implement HMC for a differentiable target $\pi(\bm{q})$ you need:
 
 The long answer: 
 \begin{itemize}
-\item \url{https://www.youtube.com/watch?v=DJ0c7Bm5Djk&feature=youtu.be&t=4h40m10s}
-\item \url{https://arxiv.org/pdf/1701.02434.pdf}
-\item \url{https://arxiv.org/pdf/1312.0906.pdf}
+\item \textbf{Everything You \emph{Should} Have Learned About MCMC} \\
+(Michael Betancourt) \\
+\url{https://www.youtube.com/watch?v=DJ0c7Bm5Djk&feature=youtu.be&t=4h40m10s}
+\item \textbf{A Conceptual Introduction to HMC} (Michael Betancourt) \\
+\url{https://arxiv.org/pdf/1701.02434.pdf}
+\item \textbf{Hamiltonian Monte Carlo for Hierarchical Models} 
+(Michael Betancourt and Mark Girolami) \\
+\url{https://arxiv.org/pdf/1312.0906.pdf}
 \end{itemize}
 
 \vspace{0.5cm}
@@ -227,16 +238,18 @@ The short answer:
 \frametitle{Works in high dimensions}
 We are interested in expecations of the form $\int f(\bm{q})\pi(\bm{q})d\bm{q}$.
 \begin{itemize}
-\item Naively: focus on areas where $f(\bm{q})\pi(\bm{q})$ is large.
-\item Better: focus on areas where where $f(\bm{q})\pi(\bm{q})d\bm{q}$ is large.
+\item Naively: focus on areas where $f(\bm{q})\pi(\bm{q})$ (density) is large.
+\item Better: where where $f(\bm{q})\pi(\bm{q})d\bm{q}$ (mass) is large.
 \end{itemize}
 \begin{center}
+Typical Set:\\
 \includegraphics[height=0.4\textheight]{typicalset.png}
 \end{center}
 In high dimensions, this is essentially a surface.
 \begin{itemize}
-\item Random walk type methods (including Gibbs) often fail.
-\item Methods based on modes often fail.
+\item Random walk methods have to take tiny steps.
+\item Gibbs methods take a long time to move around the surface.
+\item Modes are far away from mass $\to$ mode-based methods fail.
 \end{itemize}
 \end{frame}
 
@@ -258,7 +271,36 @@ When geometric ergodicity fails, HMC often won't sample due to numerically infin
 \end{frame}
 
 \begin{frame}[fragile]
-\frametitle{Using Stan}
+\frametitle{Using Stan: Resources}
+How to install Stan and \verb0rstan0 (Follow the directions carefully!):
+\begin{itemize}
+\item \url{https://github.com/stan-dev/rstan/wiki/RStan-Getting-Started}\\~\\
+\end{itemize}
+
+
+Stan manual (it's very good and constantly being improved):
+\begin{itemize}
+\item \url{https://github.com/stan-dev/stan/releases/download/v2.14.0/stan-reference-2.14.0.pdf} \\~\\
+\end{itemize}
+
+Links to the manual, examples, tutorials, and case studies:
+\begin{itemize}
+\item \url{http://mc-stan.org/documentation/}\\~\\
+\end{itemize}
+
+\verb0rstan0 documentation:
+\begin{itemize}
+\item \url{http://mc-stan.org/interfaces/rstan.html}\\~\\
+\end{itemize}
+
+A brief guide to Stan's warnings:
+\begin{itemize}
+\item \url{http://mc-stan.org/misc/warnings.html}
+\end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]
+\frametitle{Using Stan: A Simple Example}
 Define the model in a \verb0.stan0 file:
 \begin{verbatim}
 data {
@@ -270,11 +312,96 @@ parameters {
   real<lower = 0> sigma;
 }
 model {
-  y ~ normal(mu, sigma);
-  mu ~ normal(0, 10.0);
-  sigma ~ normal(0.0, 10.0);
+  y ~ normal(mu, sigma); // mean and sd parameterization
+  mu ~ normal(0, 10);
+  sigma ~ student_t(5, 0, 10);
 }
 \end{verbatim}
 \end{frame}
 
+\begin{frame}[fragile]
+\frametitle{Using Stan: A Simple Example with Hyperparameters}
+Or with prior hyperparameters as user inputs: (\verb0normal.stan0)
+\begin{verbatim}
+data {
+  int nobs;
+  vector[nobs] y;
+  real mu_prior_mn;
+  real<lower = 0> mu_prior_sd;
+  real<lower = 0> sig_prior_scale;
+  real<lower = 1> sig_prior_df;
+}
+parameters {
+  real mu;
+  real<lower = 0> sigma;
+}
+model {
+  y ~ normal(mu, sigma); // mean and sd parameterization
+  mu ~ normal(mu_prior_mn, mu_prior_sd);
+  sigma ~ student_t(sig_prior_df, 0, sig_prior_scale);
+}
+\end{verbatim}
+\end{frame}
+
+\begin{frame}[fragile]
+\frametitle{The .stan File}
+Defines a target density as a function of data and parameters.
+\begin{itemize}
+\item Data: all things that are fixed during MCMC, including prior hyperparameters and what we normally think of as ``data''.
+\item Parameters: all things we want/need to sample from.\\~\\
+\end{itemize}
+The file is composed of several ``blocks''. 
+\begin{itemize} 
+\item ``parameters'' and ``model'' blocks are mandatory. 
+\item ``data'' block is necessary to read data into Stan.
+\end{itemize}
+\begin{verbatim}
+data {
+  // define all variables to be read into Stan here
+}
+parameters {
+  // define all parameters of the target density here
+}
+model {
+  // define model as a function parameters and data here
+}
+\end{verbatim}
+\end{frame}
+
+\begin{frame}[fragile]
+\frametitle{Data Block}
+\begin{verbatim}
+data {
+  int nobs;
+  vector[nobs] y;
+  real mu_prior_mn;
+  real<lower = 0> mu_prior_sd;
+  real<lower = 0> sig_prior_scale;
+  real<lower = 0> sig_prior_df;
+}
+\end{verbatim}
+\begin{itemize}
+\item Must define every single variable that will be read into Stan.
+\item Vectors and matrices must have defined dimensions.
+\item Can specify bounds for these variables (error checking).
+\item Stan has two basic data types: \verb0int0 and \verb0real0.
+\item Vectors and Matrices are collections of \verb0real0s.
+\item Can define arrays of \verb0int0s or \verb0real0s... or vectors or whatever.
+\item Stan uses \verb0R0 style 1-based indexing.
+\item EVERY STATEMENT IN ENDS W/ A SEMICOLON (;)
+\item \verb0//0 comments just like \verb0#0 in \verb0R0.
+\end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]
+\frametitle{Basic Types}
+\begin{verbatim}
+real A;                       // scalar real
+real<lower = 0> B;            // scalar real > 0
+real<upper = 0> C;            // scalar real < 0
+real<lower = 0, upper = 1> D; // scalar real > 0 and < 1
+vector[10] E;                 // vector of 10 reals
+vector<lower = 0>[10] F;      // vector of 10 reals > 0
+\end{verbatim}
+\end{frame}
 \end{document}
