@@ -12,10 +12,17 @@ coedufull <- read.csv("data/county/edu/ACS_15_5YR_S1501_with_ann.csv", skip = 1)
 coedu <- coedufull %>%
   select(Id, Id2, Geography, contains("Percent..Estimate..Population.25.years.and.over")) %>%
   select(-Percent..Estimate..Population.25.years.and.over)
-
 colnames(coedu) <- c("id", "id.co", "name",
                      paste("edu.over25.",
-                           c("lessHS", "someHS", "HS", "someCol", "assoc", "bach", "gradprof")))
+                           c("lessHS", "someHS", "HS", "someCol", "assoc", "bach", "gradprof"),
+                           sep = ""))
+coedu <- coedu %>% mutate(odds.lessHS = edu.over25.lessHS / (100 - edu.over25.lessHS),
+                          odds.someHS = edu.over25.someHS / (100 - edu.over25.someHS),
+                          odds.HS = edu.over25.HS / (100 - edu.over25.HS),
+                          odds.someCol = edu.over25.someCol / (100 - edu.over25.someCol),
+                          odds.assoc = edu.over25.assoc / (100 - edu.over25.assoc),
+                          odds.bach = edu.over25.bach / (100 - edu.over25.bach),
+                          odds.gradprof = edu.over25.gradprof / (100 - edu.over25.gradprof))
 
 coracefull <- read.csv("data/county/race/ACS_15_5YR_DP05_with_ann.csv", skip = 1)
 corace <- coracefull %>%
@@ -27,11 +34,27 @@ corace <- coracefull %>%
          race.islander = Percent..RACE...One.race...Native.Hawaiian.and.Other.Pacific.Islander,
          race.other = Percent..RACE...One.race...Some.other.race,
          race.twoplus = Percent..RACE...Two.or.more.races,
-         hispanic = Percent..HISPANIC.OR.LATINO.AND.RACE...Total.population...Hispanic.or.Latino..of.any.race.) %>% mutate(race.other = race.other  + race.islander) %>% select(-race.islander)
+         hispanic = Percent..HISPANIC.OR.LATINO.AND.RACE...Total.population...Hispanic.or.Latino..of.any.race.) %>% mutate(race.other = race.other  + race.islander) %>%
+  select(-race.islander) %>% mutate(odds.white = race.white / (100 - race.white),
+                                    odds.black = race.black / (100 - race.black),
+                                    odds.asian = race.asian / (100 - race.asian),
+                                    odds.other = race.other / (100 - race.other),
+                                    odds.twoplus = race.twoplus / (100 - race.twoplus),
+                                    odds.hispanic = hispanic / (100 - hispanic))
 
 Sys.setlocale('LC_ALL','C') ## to deal with a string with weird characters in it
 codata <- full_join(coinc, full_join(coedu, corace)) %>% 
   mutate(state = sapply(name, function(x){strsplit(as.character(x), ", ")[[1]][2]}))
+
+codataDC <- codata
+codataDC$state[codataDC$state == "District of Columbia"] <- "Virginia"
+
+xstate <- model.matrix(~ state - 1, codata)
+
+x.base <- model.matrix(~ state - 1 + odds.black + odds.asian + odds.other +
+                          odds.twoplus + odds.hispanic + odds.lessHS +
+                          odds.someHS + odds.HS + odds.someCol + odds.assoc +
+                          odds.bach, codataDC)
 
 
 #####  fit a normal distribution
