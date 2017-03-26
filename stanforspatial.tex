@@ -329,7 +329,7 @@ data {
   real mu_prior_mn;
   real<lower = 0> mu_prior_sd;
   real<lower = 0> sig_prior_scale;
-  real<lower = 1> sig_prior_df;
+  real<lower = 0> sig_prior_df;
 }
 parameters {
   real mu;
@@ -383,7 +383,7 @@ data {
 \begin{itemize}
 \item Must define every single variable that will be read into Stan.
 \item Vectors and matrices must have defined dimensions.
-\item Can specify bounds for these variables (error checking).
+\item Can specify bounds for all variables (error checking \& automatic Jacobians).
 \item Stan has two basic data types: \verb0int0 and \verb0real0.
 \item Vectors and Matrices are collections of \verb0real0s.
 \item Can define arrays of \verb0int0s or \verb0real0s... or vectors or whatever.
@@ -394,7 +394,7 @@ data {
 \end{frame}
 
 \begin{frame}[fragile]
-\frametitle{Basic Types}
+\frametitle{Some Basic Types}
 \begin{verbatim}
 real A;                       // scalar real
 real<lower = 0> B;            // scalar real > 0
@@ -402,6 +402,55 @@ real<upper = 0> C;            // scalar real < 0
 real<lower = 0, upper = 1> D; // scalar real > 0 and < 1
 vector[10] E;                 // vector of 10 reals
 vector<lower = 0>[10] F;      // vector of 10 reals > 0
+row_vector[5]         G;      // row vector of 5 reals
+F[2]; G[3];                   
+matrix[10, 5] H;              // 10x5 matrix of reals
+H[1,3]; H[6];                 // H[6] = 6th row of H
+// special functions for accessing columns or slices of H
+cov_matrix I[2];              // 2x2 PD matrix
+corr_matrix J[2];             // 2x2 PD matrix
+cholesky_factor_cov K[2];     // lower triangular
+cholesky_factor_corr L[2];    // lower triangular
+simplex M[5];  
+// many more
+\end{verbatim}
+\end{frame}
+
+\begin{frame}[fragile]
+\frametitle{Transformed data and parameters}
+Transformed data: once before running MCMC.\\
+Transformed parameters: once per leapfrog step.\\
+\begin{verbatim}
+data { ... }
+transformed data {
+  vector[n_obs] log_y;
+  log_y = log(y);
+}
+parameters = { 
+  real<lower = 0> sigma2; ...
+}
+transformed parameters {
+  real<lower = 0> sigma;
+  sigma = sqrt(sigma);
+}
+model { 
+  log_y ~ normal(mu, sigma)
+  sigma2 ~ inv_gamma(.,.); ...
+}
+\end{verbatim}
+\end{frame}
+
+\begin{frame}[fragile]
+\frametitle{Transformations in the model block}
+Useful for intermediate quantities you don't want MCMC draws for.\\
+No constraints allowed here.
+\begin{verbatim}
+model {
+  real sigma;
+  sigma = sqrt(sigma2);
+  log_y ~ normal(mu, sigma)
+  sigma2 ~ inv_gamma(.,.); ...
+}
 \end{verbatim}
 \end{frame}
 \end{document}
