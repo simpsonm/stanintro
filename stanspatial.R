@@ -49,12 +49,17 @@ codata <- full_join(coinc, full_join(coedu, corace)) %>%
 codataDC <- codata
 codataDC$state[codataDC$state == "District of Columbia"] <- "Virginia"
 
-xstate <- model.matrix(~ state - 1, codata)
-
 x.base <- model.matrix(~ state - 1 + odds.black + odds.asian + odds.other +
                           odds.twoplus + odds.hispanic + odds.lessHS +
                           odds.someHS + odds.HS + odds.someCol + odds.assoc +
                           odds.bach, codataDC)
+
+int.state <- model.matrix(~ state - 1, codata)
+
+x.state <- model.matrix(odds.black + odds.asian + odds.other +
+                        odds.twoplus + odds.hispanic + odds.lessHS +
+                        odds.someHS + odds.HS + odds.someCol + odds.assoc +
+                        odds.bach, codata)
 
 
 #####  fit a normal distribution
