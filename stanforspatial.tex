@@ -1,5 +1,5 @@
 \documentclass[xcolor=dvipsnames]{beamer}
-\makeatletter\def\Hy@xspace@end{}\makeatother 
+\makeatletter\def\Hy@xspace@end{}\makeatother
 \usepackage{graphicx, color, amssymb, amsmath, bm, rotating, graphics,
 epsfig, multicol, amsthm}
 \usepackage[english]{babel}
@@ -47,7 +47,7 @@ epsfig, multicol, amsthm}
  \begin{column}[c]{0.5\textwidth}
 
 \begin{itemize}
-\item[] 
+\item[]
 \begin{center}
 \includegraphics[width=0.5\textwidth]{stan.jpg}
 \end{center}
@@ -115,7 +115,7 @@ Construct $\bm{p}$ in a special way. Let $\bm{q},\bm{p}\in \Re^n$ and:
 \begin{itemize}
 \item[] $V(\bm{q})\phantom{,\bm{p}} = -\log \pi(\bm{q})$ --- \emph{potential energy}.
 \item[] $T(\bm{q}, \bm{p}) = - \log \pi(\bm{p} | \bm{q})$ --- \emph{kinetic energy}.
-\item[] $H(\bm{q}, \bm{p}) = V(\bm{q}) + T(\bm{q}, \bm{p})$ --- \emph{Hamiltonian}, total energy. 
+\item[] $H(\bm{q}, \bm{p}) = V(\bm{q}) + T(\bm{q}, \bm{p})$ --- \emph{Hamiltonian}, total energy.
 \end{itemize}
 where $\bm{p}$ denotes \emph{position} and $\bm{q}$ denotes \emph{momentum}.
 
@@ -154,12 +154,12 @@ Long integration time $\implies$ essentially zero autocorrelation in the chain.
 To implement HMC for a differentiable target $\pi(\bm{q})$ you need:
 \vspace{0.2cm}
 \begin{enumerate}
-\item No discrete valued parameters in $\bm{q}$.  
+\item No discrete valued parameters in $\bm{q}$.
 \begin{itemize}
 \item Usually can integrate them out, e.g. mixture models.
 \end{itemize}
 \vspace{0.2cm}
-\item No constrained parameters in $\bm{q}$. 
+\item No constrained parameters in $\bm{q}$.
 \begin{itemize}
 \item Stan: transform and compute the log-Jacobian automatically.
 \end{itemize}
@@ -211,25 +211,25 @@ To implement HMC for a differentiable target $\pi(\bm{q})$ you need:
 \begin{frame}
 \frametitle{Why Hamiltonian Monte Carlo?}
 
-The long answer: 
+The long answer:
 \begin{itemize}
 \item \textbf{Everything You \emph{Should} Have Learned About MCMC} \\
 (Michael Betancourt) \\
 \url{https://www.youtube.com/watch?v=DJ0c7Bm5Djk&feature=youtu.be&t=4h40m10s}
 \item \textbf{A Conceptual Introduction to HMC} (Michael Betancourt) \\
 \url{https://arxiv.org/pdf/1701.02434.pdf}
-\item \textbf{Hamiltonian Monte Carlo for Hierarchical Models} 
+\item \textbf{Hamiltonian Monte Carlo for Hierarchical Models}
 (Michael Betancourt and Mark Girolami) \\
 \url{https://arxiv.org/pdf/1312.0906.pdf}
 \end{itemize}
 
 \vspace{0.5cm}
 
-The short answer: 
+The short answer:
 \begin{itemize}
-\item Works in high dimensions. 
-\item More robust. 
-\item Makes noise when it fails. 
+\item Works in high dimensions.
+\item More robust.
+\item Makes noise when it fails.
 \end{itemize}
 
 \end{frame}
@@ -301,44 +301,22 @@ A brief guide to Stan's warnings:
 
 \begin{frame}[fragile]
 \frametitle{Using Stan: A Simple Example}
-Define the model in a \verb0.stan0 file:
+Define the model in a \verb0.stan0 file, e.g. a regression model:
 \begin{verbatim}
 data {
-  int nobs;
-  vector[nobs] y;
+  int<lower = 1> n_obs;
+  int<lower = 1> n_cov;
+  vector[n_obs] y;
+  matrix[n_obs, n_cov] x;
 }
 parameters {
-  real mu;
+  vector[n_cov] beta;
   real<lower = 0> sigma;
 }
 model {
-  y ~ normal(mu, sigma); // mean and sd parameterization
-  mu ~ normal(0, 10);
-  sigma ~ student_t(5, 0, 10);
-}
-\end{verbatim}
-\end{frame}
-
-\begin{frame}[fragile]
-\frametitle{Using Stan: A Simple Example with Hyperparameters}
-Or with prior hyperparameters as user inputs: (\verb0normal.stan0)
-\begin{verbatim}
-data {
-  int nobs;
-  vector[nobs] y;
-  real mu_prior_mn;
-  real<lower = 0> mu_prior_sd;
-  real<lower = 0> sig_prior_scale;
-  real<lower = 0> sig_prior_df;
-}
-parameters {
-  real mu;
-  real<lower = 0> sigma;
-}
-model {
-  y ~ normal(mu, sigma); // mean and sd parameterization
-  mu ~ normal(mu_prior_mn, mu_prior_sd);
-  sigma ~ student_t(sig_prior_df, 0, sig_prior_scale);
+  y ~ normal(x*beta, sigma);
+  beta ~ normal(0, 10);
+  sigma ~ student_t(5, 10);
 }
 \end{verbatim}
 \end{frame}
@@ -350,10 +328,11 @@ Defines a target density as a function of data and parameters.
 \item Data: all things that are fixed during MCMC, including prior hyperparameters and what we normally think of as ``data''.
 \item Parameters: all things we want/need to sample from.\\~\\
 \end{itemize}
-The file is composed of several ``blocks''. 
-\begin{itemize} 
-\item ``parameters'' and ``model'' blocks are mandatory. 
+The file is composed of several ``blocks'' in a specific order.
+\begin{itemize}
+\item ``parameters'' and ``model'' blocks are mandatory.
 \item ``data'' block is necessary to read data into Stan.
+\item And several others.
 \end{itemize}
 \begin{verbatim}
 data {
@@ -369,51 +348,155 @@ model {
 \end{frame}
 
 \begin{frame}[fragile]
-\frametitle{Data Block}
-\begin{verbatim}
-data {
-  int nobs;
-  vector[nobs] y;
-  real mu_prior_mn;
-  real<lower = 0> mu_prior_sd;
-  real<lower = 0> sig_prior_scale;
-  real<lower = 0> sig_prior_df;
-}
-\end{verbatim}
+\frametitle{Defining variables}
+A variable can be defined at the beginning of any block,\\
+or at the beginning of any code chunk (\verb0{...}0).\\~\\
 \begin{itemize}
-\item Must define every single variable that will be read into Stan.
-\item Vectors and matrices must have defined dimensions.
-\item Can specify bounds for all variables (error checking \& automatic Jacobians).
 \item Stan has two basic data types: \verb0int0 and \verb0real0.
 \item Vectors and Matrices are collections of \verb0real0s.
 \item Can define arrays of \verb0int0s or \verb0real0s... or vectors or whatever.
-\item Stan uses \verb0R0 style 1-based indexing.
-\item EVERY STATEMENT IN ENDS W/ A SEMICOLON (;)
-\item \verb0//0 comments just like \verb0#0 in \verb0R0.
+\item Must define every variable that Stan will use.
+\item Vectors and matrices must have defined dimensions.
+\item Can (and should) specify any relevant bounds for all variables (error checking \& more).
+\item Stan uses \verb0R0 style 1-based indexing.\\~\\
 \end{itemize}
+Basic syntax: \verb0int n;0 or \verb0real y;0.
 \end{frame}
 
 \begin{frame}[fragile]
-\frametitle{Some Basic Types}
+\frametitle{Some example variable definitions}
 \begin{verbatim}
-real A;                       // scalar real
-real<lower = 0> B;            // scalar real > 0
-real<upper = 0> C;            // scalar real < 0
-real<lower = 0, upper = 1> D; // scalar real > 0 and < 1
-vector[10] E;                 // vector of 10 reals
-vector<lower = 0>[10] F;      // vector of 10 reals > 0
-row_vector[5]         G;      // row vector of 5 reals
-F[2]; G[3];                   
+int<lower = 1> A;  // A >= 1 (int constraints are inclusive)
+real<upper = 0> B; // B <= 0 (real constraints are inclusive)
+real<lower = 0, upper = 1> C; // 0 <= C <= 1
+vector[10] D;                 // vector of 10 reals
+vector<lower = 0>[10] E;      // vector of 10 reals >= 0
+row_vector[5] F;              // row vector of 5 reals
 matrix[10, 5] H;              // 10x5 matrix of reals
-H[1,3]; H[6];                 // H[6] = 6th row of H
-// special functions for accessing columns or slices of H
 cov_matrix I[2];              // 2x2 PD matrix
 corr_matrix J[2];             // 2x2 PD matrix
 cholesky_factor_cov K[2];     // lower triangular
 cholesky_factor_corr L[2];    // lower triangular
-simplex M[5];  
-// many more
+simplex M[5]; // each 0 < M[i] < 1; sum_i M[i] = 1
 \end{verbatim}
+Note: \verb0C0-style syntax: end statements with a semicolon (\verb0;0),\\
+\ \ \ \ \ \ \ \, and `\verb0//0' comments the rest of the line.
+\end{frame}
+
+\begin{frame}[fragile]
+\frametitle{Array / matrix indexing: mostly like R}
+Indexing order: array dimensions, then row, then column.
+\begin{verbatim}
+real A[N];         // N-dim array
+vector[N] B;       // N-dim vector
+matrix[N, M] C;    // NxM matrix
+vector[N] D[M];    // M N-dim vectors
+matrix[N, M] E[K]; // K NxM matrices
+A[3]; B[3];        // access 3rd element
+A[1:3]; B[1:3];    // 1st - 3rd elements
+A[ii]; B[ii]; // if ii = [1, 3], 1st and 3rd elements
+C[1,2];            // 1st row / 2nd column
+D[1,2];            // 2nd element of 1st vector
+C[1];              // first row
+D[1];              // first vector
+C[,1];             // first column
+D[,1];             // vector of 1st elements
+E[1,1:4,1:4];      // top left 4x4 submatrix of 1st matrix
+\end{verbatim}
+...and combinations of the above.
+\end{frame}
+
+\begin{frame}[fragile]
+\frametitle{Data block}
+Define all data that will be read into Stan, including any prior hyperparameters that are not hardcoded.\\~\\
+Example from \verb0regression.stan0:
+\begin{verbatim}
+data {
+  int<lower = 1> n_obs;
+  int<lower = 1> n_cov;
+  vector[n_obs] y;
+  matrix[n_obs, n_cov] x;
+  real beta_prior_mn; // assumes iid betas a priori
+  real<lower = 0> beta_prior_sd;
+  real<lower = 0> sig_prior_scale;
+  real<lower = 0> sig_prior_df;
+}
+\end{verbatim}
+This block \emph{only} consists of variable definitions.\\~\\
+
+Any constraints are checked once before the sampler is run.
+\end{frame}
+
+\begin{frame}[fragile]
+\frametitle{Parameters block}
+Define all parameters in the model.\\~\\
+Example from \verb0regression.stan0:
+\begin{verbatim}
+parameters {
+  vector[n_cov] beta;
+  real<lower = 0> sigma;
+}
+\end{verbatim}
+This block \emph{only} consists of variable definitions.\\~\\
+
+Stan automatically transforms constrained parameters to unconstrained Euclidean space and computes the relevant Jacobian. \vspace{-.5cm}
+\begin{itemize}
+\item Stan can hand simple constaints stated in terms of lower \& upper bounds, e.g. \verb0real<lower = mu_x> mu_y;0,
+\item ...and certain hardcoded complex constraints, e.g. covariance and correlation matrices, Cholesky factors of both, etc.
+\end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]
+\frametitle{Model block}
+Define the model in terms of parameters and data.\\~\\
+Example from \verb0regression.stan0:
+\begin{verbatim}
+  y ~ normal(x*beta, sigma);
+  beta ~ normal(beta_prior_mn, beta_prior_sd);
+  sigma ~ student_t(sig_prior_df, sig_prior_scale);
+\end{verbatim}
+Each sampling statement (`\verb0~0') adds the relevant quantity to the target log-density. The LHS must be a previously defined variable (data, parameter, or transformed parameter blocks).\\~\\
+`\verb0*0' is matrix multiplication.\\~\\
+Sampling statements are vectorized when it makes sense.
+\end{frame}
+
+\begin{frame}[fragile]
+\frametitle{Fitting the model in R}
+Fitting a regression:
+\begin{verbatim}
+library(rstan)
+...
+## create list of all variables in data block
+regdat = list(n_obs = n, n_cov = p, y = y, x = x,
+              beta_prior_mn = 0, beta_prior_sd = 10,
+              sig_prior_scale = 10, sig_prior_df = 5)
+
+## initialize: create the model and check data constraints
+## (takes a good 30 seconds)
+fit0 = stan("regression.stan", data = regdat,
+            chains = 1, iter = 1)
+
+## fit the model (won't need to initialize again)
+fit = stan(fit0, data = regdat, cores = 4, chains = 4,
+           warmup = 2000, iter = 4000)
+\end{verbatim}
+\end{frame}
+
+\begin{frame}[fragile]
+\frametitle{The stan() function in rstan}
+Required arguments:
+\begin{itemize}
+\item A model --- ``.stan'' file, or a previous \verb0stan0 object.
+\item Data --- list of all variables in the data block of the model.\\~\\
+\end{itemize}
+Useful named arguments and their defaults:
+\begin{itemize}
+\item cores = 1 --- number of cores to use (uses \verb0parallel0 backend).
+\item chains = 4 --- number of chains.
+\item iter = 4000 --- total number of iterations per chain.
+\item warmup = iter/2 --- number of iterations to use for tuning / burn-in.\\~\\
+\end{itemize}
+Starting values, tuning, etc., taken care of automatically, but much of this is exposed in \verb0stan()0.
 \end{frame}
 
 \begin{frame}[fragile]
@@ -426,14 +509,14 @@ transformed data {
   vector[n_obs] log_y;
   log_y = log(y);
 }
-parameters = { 
+parameters = {
   real<lower = 0> sigma2; ...
 }
 transformed parameters {
   real<lower = 0> sigma;
   sigma = sqrt(sigma);
 }
-model { 
+model {
   log_y ~ normal(mu, sigma)
   sigma2 ~ inv_gamma(.,.); ...
 }
