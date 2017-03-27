@@ -43,122 +43,52 @@ corace <- coracefull %>%
                                     odds.hispanic = hispanic / (100 - hispanic))
 
 Sys.setlocale('LC_ALL','C') ## to deal with a string with weird characters in it
-codata <- full_join(coinc, full_join(coedu, corace)) %>% 
+codata <- full_join(coinc, full_join(coedu, corace)) %>%
   mutate(state = sapply(name, function(x){strsplit(as.character(x), ", ")[[1]][2]}))
 
-codataDC <- codata
-codataDC$state[codataDC$state == "District of Columbia"] <- "Virginia"
-
-x.base <- model.matrix(~ state - 1 + odds.black + odds.asian + odds.other +
-                          odds.twoplus + odds.hispanic + odds.lessHS +
-                          odds.someHS + odds.HS + odds.someCol + odds.assoc +
-                          odds.bach, codataDC)
+x.base <- model.matrix(~ odds.black + odds.asian + odds.other +
+                         odds.twoplus + odds.hispanic + odds.lessHS +
+                         odds.someHS + odds.HS + odds.someCol + odds.assoc +
+                         odds.bach - 1, codata)
 
 int.state <- model.matrix(~ state - 1, codata)
 
-x.state <- model.matrix(odds.black + odds.asian + odds.other +
-                        odds.twoplus + odds.hispanic + odds.lessHS +
-                        odds.someHS + odds.HS + odds.someCol + odds.assoc +
-                        odds.bach, codata)
+## create list of all variables in the data block
+regdat <- list(n_obs = nrow(codata), n_cov = ncol(x.base),
+               y = codata$income.mean, x = x.base,
+               beta_prior_mn = 0, beta_prior_sd = 10000,
+               alpha_prior_mn = 60000, alpha_prior_sd = 10000,
+               sig_prior_scale = 10000, sig_prior_df = 5)
 
+## initialize the model: create it and check that data fits constraints
+regfit0 = stan("regression.stan", data = regdat, chains = 1, iter = 1)
 
-#####  fit a normal distribution
-y <- rnorm(100, 4.0, 1.2)  # simulate fake data
+## sample the model
+regfit = stan(fit = regfit0, data = regdat, cores = 4, chains = 4,
+              warmup = 2000, iter = 4000, open_progress = FALSE)
+## about 70 seconds to fit
 
-## create a list of each variable defined in the data block
-normaldat <- list(n_obs = length(y), y = y,
-                  mu_prior_mn = 0, mu_prior_sd = 10,
-                  sig_prior_scale = 10, sig_prior_df = 5)
+traceplot(regfit, pars = c("alpha", "beta", "sigma"))
 
-## create the log posterior and make sure the sampler initializes
-normalfit0 <- stan("normal.stan", data = normaldat, chains = 1, iter = 1)
-
-## create the log posterior and make sure the sampler initializes
-## warmup < iter; defaults to 1/2 iter
-## iter defaults to 4000
-## chains defaults to 4
-## cores defaults to 1 - you should set it to less than the number of cores you have
-normalfit <- stan(fit = normalfit0, data = normaldat, cores = 4, chains = 4,
-                  warmup = 2000, iter = 4000)
-
-traceplot(normalfit) 
-
-summary(normalfit)$summary ## combines all chains together
-
-##### fit a hierarchical model
-ngroup <- 3 # number of groups
-nobs <- 25 # sample size per group
-mus <- c(1.2, 1.4, 1.6)
-sigma <- 2.5
-y <- t(sapply(mus, function(x) rnorm(N, x, sigma))) ## need it to be ngroup x nobs
-
-hierdat <- list(n_obs = nobs, n_group = ngroup, y = y, mu_mn = 0, mu_sd = 10)
-
-hierfit0 <- stan("normalhier.stan", data = hierdat, chains = 1, iter = 1)
-
-hierfit <- stan(fit = hierfit0, data = hierdat, cores = 4, chains = 4,
-                warmup = 2000, iter = 4000)
-
-## lots of divergent transitions - lets check the pairs plot
-pairs(hierfit)
-pairs(hierfit, pars = c("mu", "mu_group[1]", "sigma_mu"))
-?pairs.stanfit  ## to get the help file
-## red dots: divergent transitions
-## below main diagonal: lower  than median acceptance probability
-## above main diagonal: higher than median acceptance probability
-
-## can try increasing target metropolis acceptance probability
-## but if divergent transitions are occuring when the acceptance
-## probability is already high, this is unlikely to work
-
-hierfit2 <- stan(fit = hierfit0, data = hierdat, cores = 4, chains = 4,
-                 warmup = 2000, iter = 4000,
-                 control = list(adapt_delta = 0.9))
-
-## still some divergent transitions, and we slowed down the algorithm
-
-## now lets center and scale the data
-hierfitcs0 <- stan("normalhiercs.stan", data = hierdat, chains = 1, iter = 1)
-
-hierfitcs <- stan(fit = hierfitcs0, data = hierdat, cores = 4, chains = 4,
-                  warmup = 2000, iter = 4000)
-
-
-hierfitcsnc0 <- stan("normalhiercsnc.stan", data = hierdat, chains = 1, iter = 1)
-
-hierfitcsnc <- stan(fit = hierfitcsnc0, data = hierdat, cores = 4, chains = 4,
-                    warmup = 2000, iter = 4000)
+summary(regfit)$summary
 
 
 
-## fit a hierarchical model (non-centered parameterization)
-hierfitnc0 <- stan("normalhiernoncenter.stan", data = hierdat, chains = 1, iter = 1)
+regfit_cs0 = stan("regression_cs.stan", data = regdat, chains = 1, iter = 1)
 
-hierfitnc <- stan(fit = hierfitnc0, data = hierdat, cores = 4, chains = 4,
-                  warmup = 2000, iter = 4000)
-## still divergent transitions, but a lot less
-pairs(hierfitnc, pars = c("eps_group[1]", "sigma_mu"))
-
-hierfitnc2 <- stan(fit = hierfitnc0, data = hierdat, cores = 4, chains = 4,
-                   warmup = 2000, iter = 4000,
-                   control = list(adapt_delta  = 0.9))
+## sample the model
+regfit_cs = stan(fit = regfit_cs0, data = regdat, cores = 4, chains = 4,
+                 warmup = 2000, iter = 4000, open_progress = FALSE)
+## about 10 seconds to fit
 
 
+cbind(summary(regfit, pars = c("alpha", "beta", "sigma"))$summary[,1],
+      summary(regfit_cs, pars = c("alpha", "beta", "sigma"))$summary[,1],
+      summary(regfit, pars = c("alpha", "beta", "sigma"))$summary[,1] -
+      summary(regfit_cs, pars = c("alpha", "beta", "sigma"))$summary[,1],
+      (summary(regfit, pars = c("alpha", "beta", "sigma"))$summary[,1] -
+       summary(regfit_cs, pars = c("alpha", "beta", "sigma"))$summary[,1])/
+      (summary(regfit, pars = c("alpha", "beta", "sigma"))$summary[,2] +
+      summary(regfit_cs, pars = c("alpha", "beta", "sigma"))$summary[,2]))
 
-
-## fit a regression
-
-## fit a regression (centered and standardized variables)
-
-## fit a regression with CAR errors
-
-## fit a regression with ICAR errors
-
-## fit a regression with CAR errors (sparse)
-
-## fit a regression with ICAR errors (sparse)
-
-## fit a Gaussian Process
-
-## mixture model?
 
