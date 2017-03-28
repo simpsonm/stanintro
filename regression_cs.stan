@@ -24,15 +24,19 @@ transformed data {
   real<lower = 0> alpha_cs_prior_sd;
   real<lower = 0> sig_cs_prior_scale;
 
+  // center and scale y
   y_mn = mean(y);
   y_sd = sd(y);
   y_cs = (y - y_mn)/y_sd;
 
+  // center and scale x
   for(i in 1:n_cov){
     x_mn[i] = mean(x[,i]);
     x_sd[i] = sd(x[,i]);
     x_cs[,i] = (x[,i] - x_mn[i]) / x_sd[i];
   }
+
+  // priors on _cs parameters
   x_mnsd = x_mn ./ x_sd;
   beta_cs_prior_mn = x_sd * beta_prior_mn / y_sd;
   beta_cs_prior_sd = x_sd * beta_prior_sd / y_sd;

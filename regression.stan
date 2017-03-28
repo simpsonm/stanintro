@@ -17,7 +17,7 @@ parameters {
 }
 model {
   y ~ normal(alpha + x*beta, sigma);
-  beta ~ normal(beta_prior_mn, beta_prior_sd);
   alpha ~ normal(alpha_prior_mn, alpha_prior_sd);
+  beta ~ normal(beta_prior_mn, beta_prior_sd);
   sigma ~ student_t(sig_prior_df, 0, sig_prior_scale);
 }
