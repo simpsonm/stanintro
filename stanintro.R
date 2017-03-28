@@ -56,23 +56,28 @@ int.state <- model.matrix(~ state - 1, codata)
 ## create list of all variables in the data block
 regdat <- list(n_obs = nrow(codata), n_cov = ncol(x.base),
                y = codata$income.mean, x = x.base,
-               beta_prior_mn = 0, beta_prior_sd = 10000,
-               alpha_prior_mn = 60000, alpha_prior_sd = 10000,
-               sig_prior_scale = 10000, sig_prior_df = 5)
+               beta_prior_mn = 0, beta_prior_sd = 20000,
+               alpha_prior_mn = 60000, alpha_prior_sd = 20000,
+               sig_prior_scale = 20000, sig_prior_df = 5)
 
-## initialize the model: create it and check that data fits constraints
+## initialize: create the model and check data constraints
+## (takes a good 15-30 seconds)
 regfit0 = stan("regression.stan", data = regdat, chains = 1, iter = 1)
+## ignore compiler warnings
 
 ## sample the model
 regfit = stan(fit = regfit0, data = regdat, cores = 4, chains = 4,
               warmup = 2000, iter = 4000, open_progress = FALSE)
 ## about 70 seconds to fit
 
-traceplot(regfit, pars = c("alpha", "beta", "sigma"))
+traceplot(regfit, pars = c("alpha", "beta"))
 
-summary(regfit)$summary
+traceplot(regfit, pars = c(paste("beta[", 1:3, "]", sep=""), "sigma"))
 
+summary(regfit, pars = c("alpha", "beta", "sigma"))$summary
 
+regfitdraws <- extract(regfit)
+str(regfitdraws, 1)
 
 regfit_cs0 = stan("regression_cs.stan", data = regdat, chains = 1, iter = 1)
 
@@ -81,14 +86,10 @@ regfit_cs = stan(fit = regfit_cs0, data = regdat, cores = 4, chains = 4,
                  warmup = 2000, iter = 4000, open_progress = FALSE)
 ## about 10 seconds to fit
 
+randintdat <- list(n_obs = nrow(codata), n_cov = ncol(x.base), n_state = ncol(int.state),
+               y = codata$income.mean, x = x.base, state = int.state)
 
-cbind(summary(regfit, pars = c("alpha", "beta", "sigma"))$summary[,1],
-      summary(regfit_cs, pars = c("alpha", "beta", "sigma"))$summary[,1],
-      summary(regfit, pars = c("alpha", "beta", "sigma"))$summary[,1] -
-      summary(regfit_cs, pars = c("alpha", "beta", "sigma"))$summary[,1],
-      (summary(regfit, pars = c("alpha", "beta", "sigma"))$summary[,1] -
-       summary(regfit_cs, pars = c("alpha", "beta", "sigma"))$summary[,1])/
-      (summary(regfit, pars = c("alpha", "beta", "sigma"))$summary[,2] +
-      summary(regfit_cs, pars = c("alpha", "beta", "sigma"))$summary[,2]))
+randintfit0 <- stan("rand_intercept_reg.stan", data = randintdat, chains = 1, iter = 1)
 
-
+randintfit <- stan(fit = randintfit0, data = randintdat, cores = 4, chains = 4,
+                   warmup = 2000, iter = 4000, open_progress = FALSE)
