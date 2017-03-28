@@ -79,7 +79,7 @@ epsfig, multicol, amsthm}
 
 \begin{frame}
 \frametitle{Markov chain Monte Carlo (MCMC)}
-Goal: sample from some density $\pi(\bm{q})$.\\
+Goal: sample from some target density ${\color{red}\pi(\bm{q})}$.\\
 
 \vspace{0.5cm}
 
@@ -101,7 +101,7 @@ Create a Markov chain with transition density $k(\bm{q}'|\bm{q})$.
 
 \vspace{0.5cm}
 
-Auxillary variable MCMC: construct a variable $\bm{p}$ with joint density $\pi(\bm{q},\bm{p}) = \pi(\bm{p}|\bm{q})\pi(\bm{q})$.
+Auxillary variable MCMC: construct a variable $\bm{p}$ with joint density $\pi(\bm{q},\bm{p}) = \pi(\bm{p}|\bm{q}){\color{red}\pi(\bm{q})}$.
 \begin{itemize}
 \item Construct a Markov chain for $(\bm{q}, \bm{p})$ and throw away the sampled $\bm{p}^{(t)}$s.
 \vspace{0.2cm}
@@ -113,7 +113,7 @@ Auxillary variable MCMC: construct a variable $\bm{p}$ with joint density $\pi(\
 \frametitle{HMC in Theory}
 Construct $\bm{p}$ in a special way. Let $\bm{q},\bm{p}\in \Re^n$ and:
 \begin{itemize}
-\item[] $V(\bm{q})\phantom{,\bm{p}} = -\log \pi(\bm{q})$ --- \emph{potential energy}.
+\item[] $V(\bm{q})\phantom{,\bm{p}} = -\log {\color{red}\pi(\bm{q})}$ --- \emph{potential energy}.
 \item[] $T(\bm{q}, \bm{p}) = - \log \pi(\bm{p} | \bm{q})$ --- \emph{kinetic energy}.
 \item[] $H(\bm{q}, \bm{p}) = V(\bm{q}) + T(\bm{q}, \bm{p})$ --- \emph{Hamiltonian}, total energy.
 \end{itemize}
@@ -128,7 +128,7 @@ Energy-preserving evolution in time is defined by Hamilton's equations:
 How to implement HMC (in theory):
 \begin{enumerate}
 \item Sample $\bm{p}' \sim \pi(\bm{p}|\bm{q}^{(t)})$.
-\item Run Hamiltonian evolution forward in time from $(\bm{q}^{(t)}, \bm{p}')$ for a some amount of \emph{integration time} to obtain $(\bm{q}^{(t+1)}, \bm{p}^{(t+1)})$.
+\item Run Hamiltonian evolution forward in time from $(\bm{q}^{(t)}, \bm{p}')$ for a some amount of {\color{red}\emph{integration time}} to obtain $(\bm{q}^{(t+1)}, \bm{p}^{(t+1)})$.
 \end{enumerate}
 \end{frame}
 
@@ -151,7 +151,7 @@ Long integration time $\implies$ essentially zero autocorrelation in the chain.
 
 \begin{frame}{fragile}
 \frametitle{HMC in Practice}
-To implement HMC for a differentiable target $\pi(\bm{q})$ you need:
+To implement HMC for a \textbf{differentiable} target ${\color{red}\pi(\bm{q})}$ you need:
 \vspace{0.2cm}
 \begin{enumerate}
 \item No discrete valued parameters in $\bm{q}$.
@@ -164,7 +164,7 @@ To implement HMC for a differentiable target $\pi(\bm{q})$ you need:
 \item Stan: transform and compute the log-Jacobian automatically.
 \end{itemize}
 \vspace{0.2cm}
-\item The gradient vector of $\log \pi(\bm{q})$.
+\item The gradient vector of $\log {\color{red}\pi(\bm{q})}$.
 \begin{itemize}
 \item Stan: use C++ autodiff library to do this automatically and accurately.
 \end{itemize}
@@ -182,7 +182,7 @@ To implement HMC for a differentiable target $\pi(\bm{q})$ you need:
 
 \begin{frame}
 \frametitle{HMC in Practice (continued)}
-To implement HMC for a differentiable target $\pi(\bm{q})$ you need:
+To implement HMC for a \textbf{differentiable} target ${\color{red}\pi(\bm{q})}$ you need:
 \vspace{0.2cm}
 \begin{enumerate}
 \item[5.] Numerical integrator for Hamiltonian's equations.
@@ -236,10 +236,10 @@ The short answer:
 
 \begin{frame}
 \frametitle{Works in high dimensions}
-We are interested in expecations of the form $\int f(\bm{q})\pi(\bm{q})d\bm{q}$.
+We are interested in expecations of the form $\int f(\bm{q}){\color{red}\pi(\bm{q})}d\bm{q}$.
 \begin{itemize}
-\item Naively: focus on areas where $f(\bm{q})\pi(\bm{q})$ (density) is large.
-\item Better: where where $f(\bm{q})\pi(\bm{q})d\bm{q}$ (mass) is large.
+\item Naively: focus on areas where ${\color{red}\pi(\bm{q})}$ (density) is large.
+\item Better: where where ${\color{red}\pi(\bm{q})}d\bm{q}$ (mass) is large.
 \end{itemize}
 \begin{center}
 Typical Set:\\
@@ -274,34 +274,55 @@ When geometric ergodicity fails, HMC often won't sample due to numerically infin
 \frametitle{Using Stan: Resources}
 How to install Stan and \verb0rstan0 (Follow the directions carefully!):
 \begin{itemize}
-\item \url{https://github.com/stan-dev/rstan/wiki/RStan-Getting-Started}\\~\\
+\item \url{https://github.com/stan-dev/rstan/wiki/RStan-Getting-Started}
 \end{itemize}
-
 
 Stan manual (it's very good and constantly being improved):
 \begin{itemize}
-\item \url{https://github.com/stan-dev/stan/releases/download/v2.14.0/stan-reference-2.14.0.pdf} \\~\\
+\item \url{https://github.com/stan-dev/stan/releases/download/v2.14.0/stan-reference-2.14.0.pdf}
 \end{itemize}
 
 Links to the manual, examples, tutorials, and case studies:
 \begin{itemize}
-\item \url{http://mc-stan.org/documentation/}\\~\\
+\item \url{http://mc-stan.org/documentation/}
 \end{itemize}
 
 \verb0rstan0 documentation:
 \begin{itemize}
-\item \url{http://mc-stan.org/interfaces/rstan.html}\\~\\
+\item \url{http://mc-stan.org/interfaces/rstan.html}
 \end{itemize}
 
 A brief guide to Stan's warnings:
 \begin{itemize}
 \item \url{http://mc-stan.org/misc/warnings.html}
 \end{itemize}
+
+A shorter intro with a different emphasis:
+\begin{itemize}
+\item \url{http://mlss2014.hiit.fi/mlss_files/2-stan.pdf}
+\end{itemize}
 \end{frame}
 
 \begin{frame}[fragile]
 \frametitle{Using Stan: A Simple Example}
-Define the model in a \verb0.stan0 file, e.g. a regression model:
+Running example: modeling U.S. county level income as a function of covariates.\\~\\
+
+(See \verb0stanintro.R0 for construction of covariates.)
+\begin{align*}
+y_i & = \mbox{mean household income in county $i$},\\
+\bm{x}_i' & = \mbox{education and race covariates for county $i$}.
+\end{align*}
+The regression model:
+\begin{align*}
+y_i \stackrel{ind}{\sim} \mathrm{N}(\alpha + \bm{x}_i'\bm{\beta}, \sigma^2)
+\end{align*}
+for $i=1,2,\dots,N$.
+\end{frame}
+
+
+\begin{frame}[fragile]
+\frametitle{Using Stan: A Simple Example}
+Define the model in a \verb0.stan0 file, e.g.:
 \begin{verbatim}
 data {
   int<lower = 1> n_obs;
@@ -310,13 +331,15 @@ data {
   matrix[n_obs, n_cov] x;
 }
 parameters {
+  real alpha;
   vector[n_cov] beta;
   real<lower = 0> sigma;
 }
 model {
-  y ~ normal(x*beta, sigma);
-  beta ~ normal(0, 10);
-  sigma ~ student_t(5, 10);
+  y ~ normal(alpha + x*beta, sigma);
+  alpha ~ normal(60000, 20000);
+  beta ~ normal(0, 20000);
+  sigma ~ student_t(5, 0, 20000);
 }
 \end{verbatim}
 \end{frame}
@@ -328,7 +351,7 @@ Defines a target density as a function of data and parameters.
 \item Data: all things that are fixed during MCMC, including prior hyperparameters and what we normally think of as ``data''.
 \item Parameters: all things we want/need to sample from.\\~\\
 \end{itemize}
-The file is composed of several ``blocks'' in a specific order.
+The file is composed of several ``program blocks'' in a specific order.
 \begin{itemize}
 \item ``parameters'' and ``model'' blocks are mandatory.
 \item ``data'' block is necessary to read data into Stan.
@@ -353,10 +376,10 @@ A variable can be defined at the beginning of any block,\\
 or at the beginning of any code chunk (\verb0{...}0).\\~\\
 \begin{itemize}
 \item Stan has two basic data types: \verb0int0 and \verb0real0.
-\item Vectors and Matrices are collections of \verb0real0s.
+\item Vectors and matrices are collections of \verb0real0s.
 \item Can define arrays of \verb0int0s or \verb0real0s... or vectors or whatever.
 \item Must define every variable that Stan will use.
-\item Vectors and matrices must have defined dimensions.
+\item Arrays, vectors, and matrices must have defined dimensions.
 \item Can (and should) specify any relevant bounds for all variables (error checking \& more).
 \item Stan uses \verb0R0 style 1-based indexing.\\~\\
 \end{itemize}
@@ -366,8 +389,8 @@ Basic syntax: \verb0int n;0 or \verb0real y;0.
 \begin{frame}[fragile]
 \frametitle{Some example variable definitions}
 \begin{verbatim}
-int<lower = 1> A;  // A >= 1 (int constraints are inclusive)
-real<upper = 0> B; // B <= 0 (real constraints are inclusive)
+int<lower = 1> A;  // A >= 1 (constraints are inclusive)
+real<upper = 0> B; // B <= 0
 real<lower = 0, upper = 1> C; // 0 <= C <= 1
 vector[10] D;                 // vector of 10 reals
 vector<lower = 0>[10] E;      // vector of 10 reals >= 0
@@ -380,7 +403,7 @@ cholesky_factor_corr L[2];    // lower triangular
 simplex M[5]; // each 0 < M[i] < 1; sum_i M[i] = 1
 \end{verbatim}
 Note: \verb0C0-style syntax: end statements with a semicolon (\verb0;0),\\
-\ \ \ \ \ \ \ \, and `\verb0//0' comments the rest of the line.
+\ \ \ \ \ \ \ \, and `\verb0//0' comments the rest of the line (like \verb0#0 in \verb0R0).
 \end{frame}
 
 \begin{frame}[fragile]
@@ -408,16 +431,17 @@ E[1,1:4,1:4];      // top left 4x4 submatrix of 1st matrix
 
 \begin{frame}[fragile]
 \frametitle{Data block}
-Define all data that will be read into Stan, including any prior hyperparameters that are not hardcoded.\\~\\
-Example from \verb0regression.stan0:
+Define all data that will be read into Stan. Ex: \verb0regression.stan0
 \begin{verbatim}
 data {
   int<lower = 1> n_obs;
   int<lower = 1> n_cov;
   vector[n_obs] y;
   matrix[n_obs, n_cov] x;
-  real beta_prior_mn; // assumes iid betas a priori
+  real beta_prior_mn;
   real<lower = 0> beta_prior_sd;
+  real alpha_prior_mn;
+  real<lower = 0> alpha_prior_sd;
   real<lower = 0> sig_prior_scale;
   real<lower = 0> sig_prior_df;
 }
@@ -433,6 +457,7 @@ Define all parameters in the model.\\~\\
 Example from \verb0regression.stan0:
 \begin{verbatim}
 parameters {
+  real alpha;
   vector[n_cov] beta;
   real<lower = 0> sigma;
 }
@@ -441,7 +466,7 @@ This block \emph{only} consists of variable definitions.\\~\\
 
 Stan automatically transforms constrained parameters to unconstrained Euclidean space and computes the relevant Jacobian. \vspace{-.5cm}
 \begin{itemize}
-\item Stan can hand simple constaints stated in terms of lower \& upper bounds, e.g. \verb0real<lower = mu_x> mu_y;0,
+\item Stan can hand simple constraints stated in terms of lower \& upper bounds, e.g. \verb0real<lower = mu_x> mu_y;0,
 \item ...and certain hardcoded complex constraints, e.g. covariance and correlation matrices, Cholesky factors of both, etc.
 \end{itemize}
 \end{frame}
@@ -451,34 +476,84 @@ Stan automatically transforms constrained parameters to unconstrained Euclidean 
 Define the model in terms of parameters and data.\\~\\
 Example from \verb0regression.stan0:
 \begin{verbatim}
-  y ~ normal(x*beta, sigma);
+  y ~ normal(alpha + x*beta, sigma);
+  alpha ~ normal(alpha_prior_mn, alpha_prior_sd);
   beta ~ normal(beta_prior_mn, beta_prior_sd);
-  sigma ~ student_t(sig_prior_df, sig_prior_scale);
+  sigma ~ student_t(sig_prior_df, 0, sig_prior_scale);
 \end{verbatim}
-Each sampling statement (`\verb0~0') adds the relevant quantity to the target log-density. The LHS must be a previously defined variable (data, parameter, or transformed parameter blocks).\\~\\
-`\verb0*0' is matrix multiplication.\\~\\
-Sampling statements are vectorized when it makes sense.
+Each sampling statement (`\verb0~0') adds the relevant quantity to the target log-density. The LHS must be a previously defined variable (data, parameter, transformed data, or transformed parameter blocks).\\~\\
+
+\textbf{The LHS cannot be an arbitrary function of a variable.}\\~\\
+
+Use transformed data/parameters blocks to solve this (more later).
+\end{frame}
+
+\begin{frame}[fragile]
+\frametitle{Arithmetic operators}
+`\verb0*0' is matrix multiplication when its arguments are not scalars. Similarly `\verb0/0' and `\verb0\0' are matrix division:
+\begin{align*}
+A * B = AB, && A / B = AB^{-1}, && A \backslash B = A^{-1}B
+\end{align*}
+Use `\verb0 .* 0' and `\verb0 ./ 0' for elementwise operations.\\
+\ \ \ \ ...but give these operators some space:\\
+\ \ \ \ \verb0A.*B0 will throw an error, \verb0A .* B0 will not.\\~\\
+
+Otherwise, most things work just like \verb0R0, except Stan is finicky about dimensions matching (this is good for catching errors).
+\begin{itemize}
+\item other differences: \verb0||0 for `or', \verb0&&0 for 'and', \verb0X'0 for $X$ transpose.\\~\\
+\end{itemize}
+
+Check the manual for efficient specialized functions for many common linear algebra (and other) operations, e.g.:
+\begin{verbatim}
+crossprod(); tcrossprod(); dot_product(); quad_form();
+\end{verbatim}
+\end{frame}
+
+\begin{frame}[fragile]
+\frametitle{Vectorization vs loops}
+Sampling statements are vectorized when it makes sense.\\~\\
+
+I.e. the following are equivalent ways of coding $y$'s model:
+\begin{itemize}
+\item \verb0y ~ normal(alpha + x*beta, sigma);0\
+\item
+\begin{verbatim}
+for(i in 1:n_obs){ // same as in R
+  y[i] ~ normal(alpha + x[i]*beta, sigma);
+}
+\end{verbatim}
+\end{itemize}
+Stan is written in \verb0C++0 so for loops are fast...\\~\\
+
+But the \verb0autodiff0 library is much faster on vectorized models.
+\begin{itemize}
+\item Much faster gradient computations.
+\item Sampling is cheaper per-iteration (per-leapfrog step).\\~\\
+\end{itemize}
+
+Upshot: vectorize wherever you can (see manual).
 \end{frame}
 
 \begin{frame}[fragile]
 \frametitle{Fitting the model in R}
 Fitting a regression:
 \begin{verbatim}
-library(rstan)
-...
-## create list of all variables in data block
-regdat = list(n_obs = n, n_cov = p, y = y, x = x,
-              beta_prior_mn = 0, beta_prior_sd = 10,
-              sig_prior_scale = 10, sig_prior_df = 5)
+## create list of all variables in the data block
+regdat <- list(n_obs = nrow(codata), n_cov = ncol(x.base),
+          y = codata$income.mean, x = x.base,
+          beta_prior_mn = 0, beta_prior_sd = 20000,
+          alpha_prior_mn = 60000, alpha_prior_sd = 20000,
+          sig_prior_scale = 20000, sig_prior_df = 5)
 
 ## initialize: create the model and check data constraints
-## (takes a good 30 seconds)
-fit0 = stan("regression.stan", data = regdat,
+## (takes a good 15-30 seconds)
+regfit0 = stan("regression.stan", data = regdat,
             chains = 1, iter = 1)
+## ignore compiler warnings
 
-## fit the model (won't need to initialize again)
-fit = stan(fit0, data = regdat, cores = 4, chains = 4,
-           warmup = 2000, iter = 4000)
+## fit the model (only need to initialize once)
+regfit = stan(fit = regfit0, data = regdat, cores = 4,
+           chains = 4, warmup = 2000, iter = 4000)
 \end{verbatim}
 \end{frame}
 
@@ -486,54 +561,364 @@ fit = stan(fit0, data = regdat, cores = 4, chains = 4,
 \frametitle{The stan() function in rstan}
 Required arguments:
 \begin{itemize}
-\item A model --- ``.stan'' file, or a previous \verb0stan0 object.
-\item Data --- list of all variables in the data block of the model.\\~\\
+\item A model --- ``.stan'' file, or \verb0fit = stanfit0, a \verb0stan0 object.
+\item data --- list of all variables in the data block of the model.\\
+\ \ \ \ \ \ \ \ \ \ \        (only required if the model has a data block)\\~\\
 \end{itemize}
 Useful named arguments and their defaults:
 \begin{itemize}
-\item cores = 1 --- number of cores to use (uses \verb0parallel0 backend).
-\item chains = 4 --- number of chains.
-\item iter = 4000 --- total number of iterations per chain.
-\item warmup = iter/2 --- number of iterations to use for tuning / burn-in.\\~\\
+\item \verb0cores = 10 --- number of cores to use, w/ \verb0parallel0 backend.
+\vspace{-.3cm}
+\begin{itemize}
+\item Parallelizes \emph{across} chains, not within.
+\end{itemize}
+\item \verb0chains = 40 --- number of chains.
+\item \verb1iter = 40001 --- total number of iterations per chain.
+\item \verb0warmup = iter/20 --- iterations used for tuning / burn-in.\\~\\
 \end{itemize}
 Starting values, tuning, etc., taken care of automatically, but much of this is exposed in \verb0stan()0.
 \end{frame}
 
 \begin{frame}[fragile]
+\frametitle{Running stan()}
+\begin{verbatim}
+> regfit0 = stan("regression.stan", data = regdat,
++                chains = 1, iter = 1)
+...
+warning: "BOOST_NO_CXX11_RVALUE_REFERENCES" redefined
+...
+\end{verbatim}
+\begin{itemize}
+\item Ignore compiler warnings like the one above.
+\end{itemize}
+\begin{verbatim}
+> regfit = stan(fit = regfit0, data = regdat, cores = 4,
++          chains = 4, warmup = 2000, iter = 4000)
+...
+Chain 1, Iteration: 4000 / 4000 [100%]  (Sampling)
+ Elapsed Time: 51.28 seconds (Warm-up)
+               38.532 seconds (Sampling)
+               89.812 seconds (Total)
+\end{verbatim}
+\end{frame}
+
+\begin{frame}[fragile]
+\frametitle{Traceplots}
+\verb0> traceplot(regfit, pars = c("alpha", "beta"))0
+\begin{center}
+\includegraphics[width = 0.99\textwidth]{regtrace1.png}
+\end{center}
+\end{frame}
+
+\begin{frame}[fragile]
+\frametitle{More Traceplots}
+\begin{verbatim}
+> traceplot(regfit,
++  pars = c(paste("beta[", 1:3, "]", sep=""), "sigma"))
+\end{verbatim}
+\begin{center}
+\includegraphics[width = 0.99\textwidth]{regtrace2.png}
+\end{center}
+\end{frame}
+
+\begin{frame}[fragile]
+\frametitle{Posterior Summaries}
+\tiny{
+\begin{verbatim}
+> summary(regfit, pars = c("alpha", "beta", "sigma"))$summary
+                  mean      se_mean          sd        2.5%          25%
+alpha     71399.869821  84.94908998 3938.516308  63689.9678  68746.88233
+beta[1]   -3551.058747   6.26461887  489.504511  -4522.1539  -3873.28857
+beta[2]   63251.705576  64.16739808 5145.175179  53114.7035  59754.63962
+beta[3]   22419.975765  45.58024712 3771.151469  14939.3834  19849.17895
+beta[4]  -11424.187414  91.62543117 7604.783988 -26123.4236 -16528.42301
+beta[5]       8.222437   1.30817829  111.458389   -212.2165    -67.37313
+beta[6]  -26285.741524  96.51512551 5748.283846 -37469.5113 -30101.28221
+beta[7]  -63841.417321 120.38712152 6874.102743 -77235.3078 -68536.56421
+beta[8]  -12118.477929  44.03565139 2230.542000 -16481.2903 -13615.97501
+beta[9]  -26595.696705  69.79832336 3910.493582 -34157.9793 -29214.67677
+beta[10] -17089.068001 112.51467271 6941.976014 -30492.6935 -21873.41458
+beta[11]  81749.431910 115.67307042 5624.916358  70767.5652  77925.54102
+sigma      9049.495580   1.40047729  115.141941   8831.0488   8970.70867
+lp__     -30209.057602   0.04393621    2.559298 -30214.9288 -30210.55878
+                   50%          75%       97.5%    n_eff      Rhat
+alpha     71391.759269  74043.63345  79140.4871 2149.551 1.0008773
+beta[1]   -3550.100262  -3217.50867  -2593.4421 6105.540 0.9998866
+beta[2]   63251.123712  66745.33228  73248.2005 6429.415 1.0003574
+beta[3]   22429.869178  24978.31383  29683.4286 6845.333 0.9996002
+beta[4]  -11532.083317  -6253.10872   3440.9387 6888.770 1.0001511
+beta[5]       7.641381     83.44036    228.8966 7259.248 1.0005791
+beta[6]  -26343.125976 -22457.52170 -15092.0916 3547.200 0.9997183
+beta[7]  -63924.700591 -59193.35899 -50219.5088 3260.408 1.0005047
+beta[8]  -12103.518865 -10620.56975  -7700.9977 2565.736 1.0007448
+beta[9]  -26561.026938 -23967.36268 -18947.1339 3138.869 1.0006779
+beta[10] -17026.910436 -12399.28093  -3668.6178 3806.693 1.0002487
+beta[11]  81754.468636  85563.39644  92635.6943 2364.654 1.0005060
+sigma      9047.818999   9127.68236   9276.6519 6759.506 0.9997143
+lp__     -30208.734992 -30207.18270 -30205.0836 3393.100 1.0014618
+\end{verbatim}
+}
+\end{frame}
+
+\begin{frame}[fragile]
+\frametitle{More Posterior Summaries}
+\verb0lp__0: value of the log posterior at every iteration.\\
+\verb0n_eff0: effective sample size.\\
+\begin{itemize}
+\item equivalent number of iid draw for that parameter.
+\end{itemize}
+\verb0Rhat0: potential scale reduction factor.
+\begin{itemize}
+\item convergence diagnostic based on multiple chains.
+\item \verb0Rhat0 $< 1.01$: no evidence against convergence \emph{for that parameter}.\\~\\
+\end{itemize}
+\verb0shinystan0 \verb0R0 package:
+\begin{itemize}
+\item \url{http://mc-stan.org/interfaces/shinystan}\\~\\
+\end{itemize}
+Extract posterior draws into a named list:
+\vspace{-0.2cm}
+\tiny{
+\begin{verbatim}
+> regfitdraws <- extract(regfit)
+> str(regfitdraws, 1)
+List of 4
+ $ alpha: num [1:8000(1d)] 65076 74078 62241 78395 68850 ...
+ $ beta : num [1:8000, 1:11] -2995 -3533 -3492 -3856 -3685 ...
+ $ sigma: num [1:8000(1d)] 9174 8926 9124 9074 8982 ...
+ $ lp__ : num [1:8000(1d)] -30212 -30208 -30211 -30206 -30210 ...
+\end{verbatim}
+}
+\end{frame}
+
+\begin{frame}[fragile]
 \frametitle{Transformed data and parameters}
-Transformed data: once before running MCMC.\\
-Transformed parameters: once per leapfrog step.\\
+Transformed data: transform once before running MCMC.\\
+Transformed parameters: transform once per leapfrog step.\\
 \begin{verbatim}
 data { ... }
 transformed data {
   vector[n_obs] log_y;
   log_y = log(y);
 }
-parameters = {
-  real<lower = 0> sigma2; ...
-}
+parameters = { ... }
 transformed parameters {
   real<lower = 0> sigma;
-  sigma = sqrt(sigma);
+  sigma = sqrt(sigma2);
 }
-model {
-  log_y ~ normal(mu, sigma)
-  sigma2 ~ inv_gamma(.,.); ...
+model { // implicit U(-Inf, Inf) prior on mu
+  log_y ~ normal(mu, sigma);
+  sigma2 ~ inv_gamma(0.5, 0.5); // this is a bad prior
 }
 \end{verbatim}
 \end{frame}
 
 \begin{frame}[fragile]
-\frametitle{Transformations in the model block}
-Useful for intermediate quantities you don't want MCMC draws for.\\
-No constraints allowed here.
+\frametitle{Other places to put transformations}
+Model block:
+\begin{itemize}
+\item Computed once per leapfrog step --- useful for intermediate quantities you don't want MCMC draws for.
+\item No constraints allowed here.
+\end{itemize}
+{\tiny
 \begin{verbatim}
 model {
   real sigma;
   sigma = sqrt(sigma2);
-  log_y ~ normal(mu, sigma)
-  sigma2 ~ inv_gamma(.,.); ...
+  log_y ~ normal(mu, sigma);
+  sigma2 ~ inv_gamma(0.5, 0.5); // this is a bad prior
+}
+\end{verbatim}
+}
+Generated quantities block:
+\begin{itemize}
+\item Computed once per MCMC iter --- useful for quantities you want draws for, but aren't needed for computing the posterior.
+\item Can also put random draws here, e.g. for predictive dists.
+\item Constraints allowed, but not necessary.
+\end{itemize}
+{\tiny
+\begin{verbatim}
+model { ... }
+generated quantities {
+  real muoversigma;
+  muoversigma = mu / sqrt(sigma2);
+}
+\end{verbatim}
+}
+\end{frame}
+
+\begin{frame}[fragile]
+\frametitle{Where should I put my transformation for max efficiency?}
+Transformed data block:
+\begin{itemize}
+\item All pure functions of data, or other intermediate quantities that don't depend on parameters.
+\end{itemize}
+Transformed parameters block:
+\begin{itemize}
+\item Only place to put transformations to automatically take into account the Jacobian.
+\item Any quantity that is a function of parameters and on the LHS of a sampling statement (\verb0~0).
+\item Avoid putting other quantities here because computing Jacobians is slow and unnecessary.
+\end{itemize}
+Model block:
+\begin{itemize}
+\item Intermediate quantities used on RHS of sampling statements.
+\end{itemize}
+Generated quantities block:
+\begin{itemize}
+\item Quantities you want MCMC draws for that aren't already in the parameters or transformed parameters block.
+\end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]
+\frametitle{All Possible Program Blocks}
+Only the parameters and model blocks are mandatory,\\
+but the blocks must appear in this order.
+{\tiny
+\begin{verbatim}
+functions {
+  // define user defined functions here (see manual)
+}
+data {
+  // define all input (data / hyperparameter) variables here
+}
+transformed data {
+  // create transformations of data and other intermediate
+  // quantities that don't depend on parameters here
+}
+parameters {
+  // define all model parameters here
+}
+transformed parameters {
+  // create any needed transformations of parameters here
+}
+model {
+  // create the log posterior density here
+}
+generated quantities {
+  // create any other variables you want draws for here
+}
+\end{verbatim}}
+\end{frame}
+
+\begin{frame}[fragile]
+\frametitle{Program Block Characteristics}
+\begin{center}
+\includegraphics[width = 0.99\textwidth]{blockchars.png}
+\end{center}
+Stolen from \url{http://mlss2014.hiit.fi/mlss_files/2-stan.pdf}
+\end{frame}
+
+\begin{frame}[fragile]
+\frametitle{Tricks for Better/Faster Samplers in Stan}
+HMC/Stan works best when:
+\begin{itemize}
+\item All parameters are on similar scales.
+\item Posterior geometries aren't ``weird''.
+\end{itemize}
+How to deal with these issues:
+\begin{itemize}
+\item Center and scale responses and covariates.
+\item Work on the log scale, e.g. \verb0logy ~ normal(.,.);0 is better than \verb0y ~ lognormal(.,.);0
+\item Reparameterize the model --- noncentered parameterizations.\\~\\
+\end{itemize}
+
+Centering and scaling data often drastically speeds up model fits because it makes adaptation easier.\\~\\
+
+Reparameterization is often necessary to get a working sampler at all, especially in hierarchical models.
+\end{frame}
+
+\begin{frame}[fragile]
+\frametitle{Regression with Centered and Scaled Data: Stan}
+From \verb0regression_cs.stan0. Reduce fit time from 70 to 10 secs.\\~\\
+Note: care taken to get the correct priors for the \verb0_cs0 parameters, and the correct parameter estimates back on original scale.
+{\tiny
+\begin{columns}
+\begin{column}{0.45\textwidth}
+\begin{verbatim}
+transformed data {
+  ...
+  // center and scale y
+  y_mn = mean(y);
+  y_sd = sd(y);
+  y_cs = (y - y_mn)/y_sd;
+
+  // center and scale x
+  for(i in 1:n_cov){
+    x_mn[i] = mean(x[,i]);
+    x_sd[i] = sd(x[,i]);
+    x_cs[,i] = (x[,i] - x_mn[i]) / x_sd[i];
+  }
+
+  // priors on _cs parameters
+  x_mnsd = x_mn ./ x_sd;
+  beta_cs_prior_mn = x_sd * beta_prior_mn / y_sd;
+  beta_cs_prior_sd = x_sd * beta_prior_sd / y_sd;
+  alpha_cs_prior_mn = (alpha_prior_mn-y_mn)/y_sd;
+  alpha_cs_prior_sd = alpha_prior_sd / y_sd;
+  sig_cs_prior_scale = sig_prior_scale / y_sd;
+}
+\end{verbatim}
+\end{column}
+\begin{column}{0.55\textwidth}
+\begin{verbatim}
+parameters {
+  real alpha_cs;
+  vector[n_cov] beta_cs;
+  real<lower = 0> sigma_cs;
+}
+model {
+  y_cs ~ normal(alpha_cs + x_cs*beta_cs, sigma_cs);
+  beta_cs ~ normal(beta_cs_prior_mn, beta_cs_prior_sd);
+  alpha_cs ~ normal(alpha_cs_prior_mn +
+        dot_product(x_mnsd, beta_cs), alpha_cs_prior_sd);
+  sigma_cs ~ student_t(sig_prior_df, 0, sig_cs_prior_scale);
+}
+generated quantities {
+  real alpha;
+  vector[n_cov] beta;
+  real<lower = 0> sigma;
+
+  beta = (beta_cs ./ x_sd) * y_sd;
+  alpha = alpha_cs * y_sd -
+          dot_product(x_mn, beta) + y_mn;
+  sigma = sigma_cs * y_sd;
+}
+\end{verbatim}
+\end{column}
+\end{columns}}
+\end{frame}
+
+\begin{frame}[fragile]
+\frametitle{Dealing with Hierarchical Models}
+Example: same regression, now with state-level random random intercepts.\\~\\
+Let $s[i]$ denote the state that county $i$ is in, and $\alpha_s$ denote the intercept for state $s$.\\~\\
+Now we specify the model directly on centered and scaled $y_i$ and $\bm{x}_i'$:
+\begin{align*}
+y_i | \bm{\alpha} \stackrel{ind}{\sim} \mathrm{N}(\alpha_{s[i]} + \bm{x}_i'\bm{\beta}, \sigma^2), && \alpha_s \stackrel{iid}{\sim} \mathrm{N}(\mu_{\alpha}, \sigma_{\alpha}^2),
+\end{align*}
+for $i=1,2,\dots,N$, $s=1,2,\dots,S$.
+\end{frame}
+
+\begin{frame}[fragile]
+\frametitle{Hierarhical Model in Stan}
+From \verb0rand_intercept_reg.stan0:
+\begin{verbatim}
+parameters {
+  vector[n_cov] beta;
+  real<lower = 0> sigma;
+  vector[n_state] alpha;
+  real mu_alpha;
+  real<lower = 0> sigma_alpha;
+}
+model {
+  y_cs ~ normal(state*alpha + x_cs*beta, sigma);
+  alpha ~ normal(mu_alpha, sigma_alpha);
+  beta ~ normal(0, 10);
+  sigma ~ student_t(5, 0, 10);
+  mu_alpha ~ normal(0, 10);
+  sigma_alpha ~ student_t(5, 0, 10);
 }
 \end{verbatim}
 \end{frame}
 \end{document}
+
