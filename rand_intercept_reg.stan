@@ -5,7 +5,6 @@ data {
   vector[n_obs] y;
   matrix[n_obs, n_cov] x;
   matrix[n_obs, n_state] state;
-  real<lower = 0> sig_alpha_prior_df;
 }
 transformed data {
   vector[n_obs] y_cs;
