@@ -117,7 +117,7 @@ Construct $\bm{p}$ in a special way. Let $\bm{q},\bm{p}\in \Re^n$ and:
 \item[] $T(\bm{q}, \bm{p}) = - \log \pi(\bm{p} | \bm{q})$ --- \emph{kinetic energy}.
 \item[] $H(\bm{q}, \bm{p}) = V(\bm{q}) + T(\bm{q}, \bm{p})$ --- \emph{Hamiltonian}, total energy.
 \end{itemize}
-where $\bm{p}$ denotes \emph{position} and $\bm{q}$ denotes \emph{momentum}.
+where $\bm{q}$ denotes \emph{position} and $\bm{p}$ denotes \emph{momentum}.
 
 \vspace{0.3cm}
 
@@ -185,11 +185,11 @@ To implement HMC for a \textbf{differentiable} target ${\color{red}\pi(\bm{q})}$
 To implement HMC for a \textbf{differentiable} target ${\color{red}\pi(\bm{q})}$ you need:
 \vspace{0.2cm}
 \begin{enumerate}
-\item[5.] Numerical integrator for Hamiltonian's equations.
+\item[5.] Numerical integrator for Hamilton's equations.
 \begin{itemize}
 \item Need to make an adjustment to the Hamiltonian flow and use a Metropolis correction to ensure detailed balance.
 \vspace{0.2cm}
-\item Typically use leapfrog integration $\implies$ how many leapfrog steps ?
+\item Typically use leapfrog integration $\implies$ how many leapfrog steps?
 \vspace{0.2cm}
 \item Stan: adapt number of steps to hit a target Metropolis acceptance rate.
 \end{itemize}
@@ -352,6 +352,7 @@ Defines a target density as a function of data and parameters.
 \item Parameters: all things we want/need to sample from.\\~\\
 \end{itemize}
 The file is composed of several ``program blocks'' in a specific order.
+\vspace{-.5cm}
 \begin{itemize}
 \item ``parameters'' and ``model'' blocks are mandatory.
 \item ``data'' block is necessary to read data into Stan.
