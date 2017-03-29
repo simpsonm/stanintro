@@ -43,8 +43,15 @@ corace <- coracefull %>%
                                     odds.hispanic = hispanic / (100 - hispanic))
 
 Sys.setlocale('LC_ALL','C') ## to deal with a string with weird characters in it
+
+regions <- read.csv("data/state-geocodes.csv")
+regions$state <- as.character(regions$Name)
+
 codata <- full_join(coinc, full_join(coedu, corace)) %>%
-  mutate(state = sapply(name, function(x){strsplit(as.character(x), ", ")[[1]][2]}))
+  mutate(state = sapply(name, function(x){strsplit(as.character(x), ", ")[[1]][2]})) %>%
+  left_join(regions)
+
+codata$state[codata$state == "District of Columbia"] <- "Virginia"
 
 x.base <- model.matrix(~ odds.black + odds.asian + odds.other +
                          odds.twoplus + odds.hispanic + odds.lessHS +
@@ -52,6 +59,8 @@ x.base <- model.matrix(~ odds.black + odds.asian + odds.other +
                          odds.bach - 1, codata)
 
 int.state <- model.matrix(~ state - 1, codata)
+
+int.division <- model.matrix(~ Division - 1, codata)
 
 ## create list of all variables in the data block
 regdat <- list(n_obs = nrow(codata), n_cov = ncol(x.base),
@@ -86,10 +95,16 @@ regfit_cs = stan(fit = regfit_cs0, data = regdat, cores = 4, chains = 4,
                  warmup = 2000, iter = 4000, open_progress = FALSE)
 ## about 10 seconds to fit
 
-randintdat <- list(n_obs = nrow(codata), n_cov = ncol(x.base), n_state = ncol(int.state),
-               y = codata$income.mean, x = x.base, state = int.state)
+randintdat <- list(n_obs = nrow(codata), n_cov = ncol(x.base), n_state = ncol(int.division),
+               y = codata$income.mean, x = x.base, state = int.division)
 
 randintfit0 <- stan("rand_intercept_reg.stan", data = randintdat, chains = 1, iter = 1)
 
 randintfit <- stan(fit = randintfit0, data = randintdat, cores = 4, chains = 4,
                    warmup = 2000, iter = 4000, open_progress = FALSE)
+
+
+randintncfit0 <- stan("rand_intercept_reg_noncen.stan", data = randintdat, chains = 1, iter = 1)
+
+randintncfit <- stan(fit = randintncfit0, data = randintdat, cores = 4, chains = 4,
+                     warmup = 2000, iter = 4000, open_progress = FALSE)
