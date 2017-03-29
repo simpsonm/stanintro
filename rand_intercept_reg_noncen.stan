@@ -27,20 +27,21 @@ transformed data {
   }
 }
 parameters {
-  vector[n_cov] beta;
+  vector[n_cov] beta_raw;    // "noncentered" coefficients
   real<lower = 0> sigma;
   vector[n_state] alpha_raw; // "noncentered" intercepts
   real mu_alpha;
   real<lower = 0> sigma_alpha;
 }
-transformed parameters {
-  vector[n_state] alpha;
-  alpha = mu_alpha + sigma_alpha * alpha_raw;
-}
 model {
+  vector[n_state] alpha;
+  vector[n_cov] beta;
+  alpha = mu_alpha + sigma_alpha * alpha_raw;
+  beta = 10*beta_raw;
+
   y_cs ~ normal(state*alpha + x_cs*beta, sigma);
   alpha_raw ~ normal(0, 1);
-  beta ~ normal(0, 10);
+  beta_raw ~ normal(0, 1);
   sigma ~ student_t(5, 0, 10);
   mu_alpha ~ normal(0, 10);
   sigma_alpha ~ student_t(5, 0, 10);
