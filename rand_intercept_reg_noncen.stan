@@ -4,7 +4,7 @@ data {
   int<lower = 1> n_region;
   vector[n_obs] y;
   matrix[n_obs, n_cov] x;
-  matrix[n_obs, n_region] region;
+  int region[n_obs];
 }
 transformed data {
   vector[n_obs] y_cs;
@@ -36,7 +36,7 @@ parameters {
 model {
   vector[n_region] alpha;
   alpha = mu_alpha + alpha_raw*sigma_alpha;
-  y_cs ~ normal(region*alpha + x_cs*beta, sigma);
+  y_cs ~ normal(alpha[region] + x_cs*beta, sigma);
   alpha_raw ~ normal(0, 1);
   beta ~ normal(0, 10);
   sigma ~ student_t(5, 0, 10);
