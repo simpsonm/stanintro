@@ -22,7 +22,8 @@ epsfig, multicol, amsthm}
 \setbeamercovered{transparent=0}
 \beamertemplatenavigationsymbolsempty
 
-\title[Stan for Spatial]{Introduction to Stan for Markov Chain Monte Carlo}
+\title[Stan for Spatial]{Introduction to Stan for \\
+Markov Chain Monte Carlo}
 
 %\subtitle{}
 \author[Matt Simpson]{Matthew Simpson}
@@ -138,13 +139,10 @@ How to implement HMC (in theory):
 \includegraphics[height=0.5\textheight]{hmc.png}
 \end{center}
 
-HMC samples a level set, then deterministically moves along that set.
+HMC samples a level set, then moves along that set.\\~\\
 
-\vspace{0.3cm}
 
-Long integration time $\implies$ essentially zero autocorrelation in the chain.
-
-\vspace{0.3cm}
+Long integration time $\implies$ $\approx$ zero autocorrelation in the chain.\\~\\
 
 (Picture stolen from \url{https://arxiv.org/pdf/1601.00225.pdf})
 \end{frame}
@@ -172,7 +170,7 @@ To implement HMC for a \textbf{differentiable} target ${\color{red}\pi(\bm{q})}$
 \item Choose a kinetic energy, i.e. $\pi(\bm{p}|\bm{q})$.
 \begin{itemize}
 \item Stan: $\mathrm{N}(\bm{0}, \bm{M})$ and tune $\bm{M}$ during warmup. (Typical HMC)
-\item More intelligent: $\bm{M}(\bm{q})$. (Riemannian HMC; future Stan?)
+\item More intelligent: $\bm{M}(\bm{q})$. (Riemannian HMC; future Stan)
 \end{itemize}
 \end{enumerate}
 \begin{align*}
@@ -259,7 +257,7 @@ HMC has guaranteed geometric ergodicity in a larger class of target densities th
 
 \vspace{0.5cm}
 
-When geometric ergodicity fails, HMC often won't sample due to numerically infinite gradients.
+When geometric ergodicity fails, HMC often won't sample due to numerically infinite gradients (``divergent transitions'').
 \begin{center}
 \includegraphics[height = 0.4\textheight]{divergent.png}
 \end{center}
@@ -891,54 +889,208 @@ generated quantities {
 
 \begin{frame}[fragile]
 \frametitle{Dealing with Hierarchical Models}
-Example: same regression, now with state-level random random intercepts.\\~\\
-Let $s[i]$ denote the state that county $i$ is in, and $\alpha_s$ denote the intercept for state $s$.\\~\\
+Example: same regression, now with region-level random intercepts.\\~\\
+Let $r[i]$ denote the state that county $i$ is in, and $\alpha_r$ denote the intercept for state $r$.\\~\\
 Now we specify the model directly on centered and scaled $y_i$ and $\bm{x}_i'$:
 \begin{align*}
-y_i | \bm{\alpha} \stackrel{ind}{\sim} \mathrm{N}(\alpha_{s[i]} + \bm{x}_i'\bm{\beta}, \sigma^2), && \alpha_s \stackrel{iid}{\sim} \mathrm{N}(\mu_{\alpha}, \sigma_{\alpha}^2),
+y_i | \bm{\alpha} \stackrel{ind}{\sim} \mathrm{N}(\alpha_{r[i]} + \bm{x}_i'\bm{\beta}, \sigma^2), && \alpha_r \stackrel{iid}{\sim} \mathrm{N}(\mu_{\alpha}, \sigma_{\alpha}^2),
 \end{align*}
-for $i=1,2,\dots,N$, $s=1,2,\dots,S$.
+for $i=1,2,\dots,N$, $r=1,2,\dots,R$.
 \end{frame}
 
 \begin{frame}[fragile]
-\frametitle{Hierarhical Model in Stan}
-From \verb0rand_intercept_reg.stan0:
+\frametitle{Random Intercept Regression in Stan}
+From \verb0rand_intercept_reg.stan0 (about 20 seconds to fit):
+{\tiny
 \begin{verbatim}
 parameters {
   vector[n_cov] beta;
   real<lower = 0> sigma;
-  vector[n_state] alpha;
+  vector[n_region] alpha;
   real mu_alpha;
   real<lower = 0> sigma_alpha;
 }
 model {
-  y_cs ~ normal(state*alpha + x_cs*beta, sigma);
+  y_cs ~ normal(region*alpha + x_cs*beta, sigma);
   alpha ~ normal(mu_alpha, sigma_alpha);
   beta ~ normal(0, 10);
   sigma ~ student_t(5, 0, 10);
   mu_alpha ~ normal(0, 10);
   sigma_alpha ~ student_t(5, 0, 10);
 }
-\end{verbatim}
+\end{verbatim}}
+Problems:
+{\tiny
+\begin{verbatim}
+> randintfit <- stan(fit = randintfit0, data = randintdat, cores = 4, chains = 4,
++                    warmup = 2000, iter = 4000, open_progress = FALSE)
+...
+[1] "The following numerical problems occured the indicated number of times on chain 4"
+                                                                                count
+Exception thrown at line 37: normal_log: Scale parameter is 0, but must be > 0!     3
+[1] "When a numerical problem occurs, the Hamiltonian proposal gets rejected."
+[1] "See http://mc-stan.org/misc/warnings.html#exception-hamiltonian-proposal-rejected"
+[1] "If the number in the 'count' column is small,  do not ask about this message on stan-users."
+Warning messages:
+1: There were 1146 divergent transitions after warmup. Increasing adapt_delta above 0.8 may help. See
+http://mc-stan.org/misc/warnings.html#divergent-transitions-after-warmup
+2: Examine the pairs() plot to diagnose sampling problems
+\end{verbatim}}
+\end{frame}
+
+\begin{frame}[fragile]
+\frametitle{Guide to Stan's Warnings}
+Summarizing from \url{http://mc-stan.org/misc/warnings.html}\\~\\
+
+Exception ... Hamiltonian proposal rejected: {\tiny\verb9Exception thrown at line 37: normal_log: Scale parameter is 0, but must be > 0!9}.
+\begin{itemize}
+\item Not a problem if the proportion of iters with exceptions is low.
+\item If the proportion is high: indication of a problem w/ the model.\\
+\begin{itemize}
+\item[] e.g. maybe a hierarchical variance should be zero.\\~\\
+\end{itemize}
+\end{itemize}
+
+Low Bayesian Fraction of Missing Information:
+\begin{itemize}
+\item Indicates that the adaptation turned out poorly and the chain did not properly explore the posterior.
+\item Can solve by increasing \verb0warmup0 or reparameterizing.
+\end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]
+\frametitle{Focus on Divergent Transitions}
+Divergent transitions after warmup: {\tiny\verb91: There were 1146 divergent transitions after warmup. Increasing adapt_delta above 0.8 may help.9}
+\vspace{-0.4cm}
+\begin{itemize}
+\item Indicates that geometric ergodicity is breaking down. \textbf{\emph{Just one divergent transition is enough to be concerning.}}
+\item Solve via reparameterization or increasing \verb0adapt_delta0.\\
+\verb0stan(..., control = list(adapt_delta = .99))0\\~\\
+\end{itemize}
+
+\verb0adapt_delta0 is the target Metropolis acceptance rate, which is controlled via the leapfrog step size.\\~\\
+
+Lowering the leapfrog step size forces the numerical integrator to follow the local curvature of the target distribution more closely...\\~\\
+
+But this doesn't always work! Reparameterization can solve it.
+\end{frame}
+
+\begin{frame}[fragile]
+\frametitle{The Problem with Hierarchical Models}
+Good discussion in \textbf{HMC for Hierarchical Models}: \url{https://arxiv.org/pdf/1312.0906.pdf}\\~\\
+
+In a nutshell: these posterior distributions have weird geometries.
+\begin{itemize}
+\item Parameters are highly correlated, and global and local correlations may be very different.
+\item Gibbs samplers have high autocorrelation.
+\item Random Walk Metropolis samplers have small step sizes.
+\item HMC more likely to have divergent transitions.
+\item Geometric ergodicity hard \textbf{\emph{using any method}}.\\~\\
+\end{itemize}
+How to fix this?
+\begin{itemize}
+\item Gibbs: reparameterize, parameter expansion, interweaving.
+\item HMC: reparameterize, decrease step size, Riemannian HMC.
+\end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]
+\frametitle{Centered vs. noncentered parameterizations}
+\begin{align*}
+y_i &\sim \mathrm{N}(\alpha_{r[i]} + \bm{x}_i'\bm{\beta}, \sigma^2), && \alpha_r \sim \mathrm{N}(\mu_{\alpha}, \sigma_{\alpha}^2); && \mbox{(centered)}\\
+y_i &\sim \mathrm{N}(\mu_{\alpha} + \sigma_{\alpha}\varepsilon_{r[i]} + \bm{x}_i'\bm{\beta}, \sigma^2), && \varepsilon_r \sim \mathrm{N}(0, 1). && \mbox{(noncentered)}\\
+\end{align*}
+Define the signal-to-noise ratio: $\sigma_{\alpha}^2/\sigma^2$.\\~\\
+
+Centered parameterization:
+\begin{itemize}
+\item Usually the natural way to write the model.
+\item Results in easy MCMC when the signal-to-noise ratio is large.\\~\\
+\end{itemize}
+Noncentered parameterization:
+\begin{itemize}
+\item Usually found by centering and scaling: $\varepsilon_r = (\alpha_r - \mu_{\alpha})/\sigma_{\alpha}$.
+\item Results in easy MCMC when the signal-to-noise ratio is small.
+\end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]
+\frametitle{Noncentered Random Intercept Regression}
+From \verb0rand_intercept_reg_noncen.stan0 (about 15 min to fit):
+{\tiny
+\begin{verbatim}
+parameters {
+  vector[n_cov] beta;
+  real<lower = 0> sigma;
+  vector[n_region] alpha_raw; // "noncentered" intercepts
+  real mu_alpha;
+  real<lower = 0> sigma_alpha;
+}
+model {
+  vector[n_region] alpha;
+  alpha = mu_alpha + sigma_alpha * alpha_raw;
+  y_cs ~ normal(region*alpha + x_cs*beta, sigma);
+  alpha_raw ~ normal(0, 1);
+  beta ~ normal(0, 10);
+  sigma ~ student_t(5, 0, 10);
+  mu_alpha ~ normal(0, 10);
+  sigma_alpha ~ student_t(5, 0, 10);
+}
+\end{verbatim}}
+Less divergent transitions with this parameterization:
+{\tiny
+\begin{verbatim}
+1: There were 701 divergent transitions after warmup. Increasing adapt_delta above 0.8 may help.
+\end{verbatim}}
+Now try increasing \verb0adapt_delta0 (default = 0.8):
+{\tiny
+\begin{verbatim}
+> randintncfit2 <- stan(fit = randintncfit, data = randintdat, cores = 4, chains = 4,
++                       warmup = 2000, iter = 4000, open_progress = FALSE,
++                       control = list(adapt_delta = 0.999))
+\end{verbatim}}
+yields 0 divergent transitions in about 15 minutes.
+\end{frame}
+
+\begin{frame}[fragile]
+\frametitle{Stan vs Gibbs for Hierarchical Models}
+Stan's major advantages:
+\begin{itemize}
+\item Stan tends to let you know when geometric ergodicity fails.
+\item Stan tends to be more efficient.
+\end{itemize}
+\begin{center}
+\includegraphics[width = 0.5\textwidth]{center.png}\\
+\includegraphics[width = 0.9\textwidth]{hmctable.png}
+\end{center}
+From \textbf{HMC for Hierarchical Models}:\url{https://arxiv.org/pdf/1312.0906.pdf}
+\end{frame}
+
+\begin{frame}[fragile]
+\frametitle{Coming Soon: Riemannian HMC (and more)}
+Good Riemannian HMC deals with all of this without user input.\\~\\
+From the manual:
+\begin{center}
+\includegraphics[width=0.6\textwidth]{stanfuture.png}
+\end{center}
+Implementation problem: now need the Hessian of the target density. They're working on it.
 \end{frame}
 
 \begin{frame}
-\frametitle{Slides Left:}
-\begin{enumerate}
-\item Results of hierarchical model
-\begin{enumerate}
-\item divergent transitions
-\item exceptions
-\end{enumerate}
-\item Noncentered hierarchical model
-\item results of noncenetered model
-\item when is stan good (sorts of models)
-\begin{enumerate}
-\item cheap likelihoods
-\item not-too-large covariance matrices
-\item not-too-large mixtures
-\end{enumerate}
-\end{enumerate}
+      \begin{center}
+
+        \font\endfont = cmss10 at 20.40mm
+        \color{Red}
+        \endfont
+        \baselineskip 20.0mm
+
+        Thank you!\\~\\
+
+        Questions?
+
+      \end{center}
+\vspace{.4cm}
+Matthew Simpson \hfill themattsimpson@gmail.com
 \end{frame}
 \end{document}
 
