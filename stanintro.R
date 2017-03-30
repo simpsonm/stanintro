@@ -108,3 +108,7 @@ randintncfit0 <- stan("rand_intercept_reg_noncen.stan", data = randintdat, chain
 
 randintncfit <- stan(fit = randintncfit0, data = randintdat, cores = 2, chains = 2,
                      warmup = 1000, iter = 2000, open_progress = FALSE)
+
+randintncfit2 <- stan(fit = randintncfit, data = randintdat, cores = 4, chains = 4,
+                      warmup = 2000, iter = 4000, open_progress = FALSE,
+                      control = list(adapt_delta = 0.9))
