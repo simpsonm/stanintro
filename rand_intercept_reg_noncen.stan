@@ -1,10 +1,10 @@
 data {
   int<lower = 1> n_obs;
   int<lower = 1> n_cov;
-  int<lower = 1> n_state;
+  int<lower = 1> n_region;
   vector[n_obs] y;
   matrix[n_obs, n_cov] x;
-  matrix[n_obs, n_state] state;
+  matrix[n_obs, n_region] region;
 }
 transformed data {
   vector[n_obs] y_cs;
@@ -27,21 +27,20 @@ transformed data {
   }
 }
 parameters {
-  vector[n_cov] beta_raw;    // "noncentered" coefficients
+  vector[n_cov] beta;
   real<lower = 0> sigma;
-  vector[n_state] alpha_raw; // "noncentered" intercepts
+  vector[n_region] alpha_raw; // "noncentered" intercepts
   real mu_alpha;
   real<lower = 0> sigma_alpha;
 }
-model {
-  vector[n_state] alpha;
-  vector[n_cov] beta;
+transformed parameters{
+  vector[n_region] alpha;
   alpha = mu_alpha + sigma_alpha * alpha_raw;
-  beta = 10*beta_raw;
-
-  y_cs ~ normal(state*alpha + x_cs*beta, sigma);
+}
+model {
+  y_cs ~ normal(region*alpha + x_cs*beta, sigma);
   alpha_raw ~ normal(0, 1);
-  beta_raw ~ normal(0, 1);
+  beta ~ normal(0, 10);
   sigma ~ student_t(5, 0, 10);
   mu_alpha ~ normal(0, 10);
   sigma_alpha ~ student_t(5, 0, 10);

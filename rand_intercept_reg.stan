@@ -1,10 +1,10 @@
 data {
   int<lower = 1> n_obs;
   int<lower = 1> n_cov;
-  int<lower = 1> n_state;
+  int<lower = 1> n_region;
   vector[n_obs] y;
   matrix[n_obs, n_cov] x;
-  matrix[n_obs, n_state] state;
+  matrix[n_obs, n_region] region;
 }
 transformed data {
   vector[n_obs] y_cs;
@@ -29,12 +29,12 @@ transformed data {
 parameters {
   vector[n_cov] beta;
   real<lower = 0> sigma;
-  vector[n_state] alpha;
+  vector[n_region] alpha;
   real mu_alpha;
   real<lower = 0> sigma_alpha;
 }
 model {
-  y_cs ~ normal(state*alpha + x_cs*beta, sigma);
+  y_cs ~ normal(region*alpha + x_cs*beta, sigma);
   alpha ~ normal(mu_alpha, sigma_alpha);
   beta ~ normal(0, 10);
   sigma ~ student_t(5, 0, 10);

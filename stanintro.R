@@ -62,6 +62,8 @@ int.state <- model.matrix(~ state - 1, codata)
 
 int.division <- model.matrix(~ Division - 1, codata)
 
+int.region <- model.matrix(~ Region - 1, codata)
+
 ## create list of all variables in the data block
 regdat <- list(n_obs = nrow(codata), n_cov = ncol(x.base),
                y = codata$income.mean, x = x.base,
@@ -95,8 +97,8 @@ regfit_cs = stan(fit = regfit_cs0, data = regdat, cores = 4, chains = 4,
                  warmup = 2000, iter = 4000, open_progress = FALSE)
 ## about 10 seconds to fit
 
-randintdat <- list(n_obs = nrow(codata), n_cov = ncol(x.base), n_state = ncol(int.division),
-               y = codata$income.mean, x = x.base, state = int.division)
+randintdat <- list(n_obs = nrow(codata), n_cov = ncol(x.base), n_region = ncol(int.region),
+               y = codata$income.mean, x = x.base, region = int.region)
 
 randintfit0 <- stan("rand_intercept_reg.stan", data = randintdat, chains = 1, iter = 1)
 
@@ -106,8 +108,8 @@ randintfit <- stan(fit = randintfit0, data = randintdat, cores = 4, chains = 4,
 
 randintncfit0 <- stan("rand_intercept_reg_noncen.stan", data = randintdat, chains = 1, iter = 1)
 
-randintncfit <- stan(fit = randintncfit0, data = randintdat, cores = 2, chains = 2,
-                     warmup = 1000, iter = 2000, open_progress = FALSE)
+randintncfit <- stan(fit = randintncfit0, data = randintdat, cores = 4, chains = 4,
+                     warmup = 2000, iter = 4000, open_progress = FALSE)
 
 randintncfit2 <- stan(fit = randintncfit, data = randintdat, cores = 4, chains = 4,
                       warmup = 2000, iter = 4000, open_progress = FALSE,
