@@ -33,11 +33,9 @@ parameters {
   real mu_alpha;
   real<lower = 0> sigma_alpha;
 }
-transformed parameters{
-  vector[n_region] alpha;
-  alpha = mu_alpha + sigma_alpha * alpha_raw;
-}
 model {
+  vector[n_region] alpha;
+  alpha = mu_alpha + alpha_raw*sigma_alpha;
   y_cs ~ normal(region*alpha + x_cs*beta, sigma);
   alpha_raw ~ normal(0, 1);
   beta ~ normal(0, 10);
