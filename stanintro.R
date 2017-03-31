@@ -125,3 +125,15 @@ randintncfit0 <- stan("rand_intercept_reg_noncen.stan", data = randintdat, chain
 
 randintncfit <- stan(fit = randintncfit0, data = randintdat, cores = 4, chains = 4,
                      warmup = 2000, iter = 4000, open_progress = FALSE)
+
+
+intdat <- list(n_obs = nrow(codata), 
+               y = codata$income.mean, 
+               region = codata$Region,
+               n_region = length(unique(codata$Region)))
+
+
+intfit0 <- stan("rand_intercept.stan", data = intdat, chains = 1, iter = 1)
+
+intfit <- stan(fit = intfit0, data = intdat, cores = 4, chains = 4,
+               warmup = 2000, iter = 4000, open_progress = FALSE)
