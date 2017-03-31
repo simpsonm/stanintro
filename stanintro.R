@@ -51,12 +51,18 @@ codata <- full_join(coinc, full_join(coedu, corace)) %>%
   mutate(state = sapply(name, function(x){strsplit(as.character(x), ", ")[[1]][2]})) %>%
   left_join(regions)
 
-codata$state[codata$state == "District of Columbia"] <- "Virginia"
-
 x.base <- model.matrix(~ odds.black + odds.asian + odds.other +
                          odds.twoplus + odds.hispanic + odds.lessHS +
                          odds.someHS + odds.HS + odds.someCol + odds.assoc +
                          odds.bach - 1, codata)
+
+x.educ <- model.matrix(~ odds.lessHS +
+                         odds.someHS + odds.HS + odds.someCol + odds.assoc +
+                         odds.bach - 1, codata)
+
+x.race <- model.matrix(~ odds.black + odds.asian + odds.other +
+                         odds.twoplus + odds.hispanic - 1, codata)
+
 
 int.state <- model.matrix(~ state - 1, codata)
 
@@ -127,13 +133,48 @@ randintncfit <- stan(fit = randintncfit0, data = randintdat, cores = 4, chains =
                      warmup = 2000, iter = 4000, open_progress = FALSE)
 
 
-intdat <- list(n_obs = nrow(codata), 
-               y = codata$income.mean, 
-               region = codata$Region,
-               n_region = length(unique(codata$Region)))
 
 
-intfit0 <- stan("rand_intercept.stan", data = intdat, chains = 1, iter = 1)
 
-intfit <- stan(fit = intfit0, data = intdat, cores = 4, chains = 4,
-               warmup = 2000, iter = 4000, open_progress = FALSE)
+randintdat <- list(n_obs = nrow(codata), n_cov = ncol(x.race), n_region = length(unique(codata$Region)),
+                   y = codata$income.mean, x = x.race, region = as.numeric(as.factor(codata$Region)))
+
+randintfit0 <- stan("rand_intercept_reg.stan", data = randintdat, chains = 1, iter = 1)
+
+randintfit <- stan(fit = randintfit0, data = randintdat, cores = 4, chains = 4,
+                   warmup = 2000, iter = 4000, open_progress = FALSE)
+
+pairs(randintfit, pars = c("alpha[1]", "sigma_alpha"))
+
+pairs(randintfit)
+
+
+randintncfit0 <- stan("rand_intercept_reg_noncen.stan", data = randintdat, chains = 1, iter = 1)
+
+randintncfit <- stan(fit = randintncfit0, data = randintdat, cores = 4, chains = 4,
+                     warmup = 2000, iter = 4000, open_progress = FALSE)
+
+pairs(randintncfit)
+
+x.full <- model.matrix(~ odds.black + odds.asian + odds.other +
+                         odds.twoplus + odds.hispanic + odds.lessHS +
+                         odds.someHS + odds.HS + odds.someCol + odds.assoc +
+                         odds.bach, codata)
+
+
+randregdat <- list(n_obs = nrow(codata), n_cov = ncol(x.full), n_group = length(unique(codata$state)),
+                   y = codata$income.mean, x = x.full, group = as.numeric(as.factor(codata$state)))
+
+
+randregfit0 <- stan("rand_regression.stan", data = randregdat, chains = 1, iter = 1)
+
+randregfit <- stan(fit = randregfit0, data = randregdat, cores = 4, chains = 4,
+                   warmup = 2000, iter = 4000, open_progress = FALSE)
+## 500 seconds, 229 divergent transitions
+
+randregncfit0 <- stan("rand_regression_nc.stan", data = randregdat, chains = 1, iter = 1)
+
+randregncfit <- stan(fit = randregncfit0, data = randregdat, cores = 4, chains = 4,
+                     warmup = 2000, iter = 4000, open_progress = FALSE)
+
+## nothing works; fake data is probably where it's at
