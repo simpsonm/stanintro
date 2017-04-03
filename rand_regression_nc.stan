@@ -9,22 +9,19 @@ data {
 transformed data {
   vector[n_obs] y_cs;
   matrix[n_obs, n_cov] x_cs;
-  real y_mn;
-  real<lower = 0> y_sd;
-  real x_mn;
-  real<lower = 0> x_sd;
 
   // center and scale y
-  y_mn = mean(y);
-  y_sd = sd(y);
-  y_cs = (y - y_mn)/y_sd;
+  y_cs = (y - mean(y))/sd(y);
 
   // center and scale x
   x_cs[,1] = x[,1];
-  for(i in 2:n_cov){
-    x_mn = mean(x[,i]);
-    x_sd = sd(x[,i]);
-    x_cs[,i] = (x[,i] - x_mn) / x_sd;
+  if(n_cov > 1){
+    for(i in 2:n_cov){
+      real x_mn; real x_sd;
+      x_mn = mean(x[,i]);
+      x_sd = sd(x[,i]);
+      x_cs[,i] = (x[,i] - x_mn) / x_sd;
+    }
   }
 }
 parameters {
