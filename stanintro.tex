@@ -118,7 +118,7 @@ Construct $\bm{p}$ in a special way. Let $\bm{q},\bm{p}\in \Re^n$ and:
 \item[] $T(\bm{q}, \bm{p}) = - \log \pi(\bm{p} | \bm{q})$ --- \emph{kinetic energy}.
 \item[] $H(\bm{q}, \bm{p}) = V(\bm{q}) + T(\bm{q}, \bm{p})$ --- \emph{Hamiltonian}, total energy.
 \end{itemize}
-where $\bm{q}$ denotes \emph{position} and $\bm{p}$ denotes \emph{momentum}.
+where $\bm{q}$ denotes {\color{red}\emph{position}} and $\bm{p}$ denotes {\color{red}\emph{momentum}}.
 
 \vspace{0.3cm}
 
@@ -128,7 +128,7 @@ Energy-preserving evolution in time is defined by Hamilton's equations:
 \end{align*}
 How to implement HMC (in theory):
 \begin{enumerate}
-\item Sample $\bm{p}' \sim \pi(\bm{p}|\bm{q}^{(t)})$.
+\item Sample momenta variables: $\bm{p}' \sim \pi(\bm{p}|\bm{q}^{(t)})$.
 \item Run Hamiltonian evolution forward in time from $(\bm{q}^{(t)}, \bm{p}')$ for a some amount of {\color{red}\emph{integration time}} to obtain $(\bm{q}^{(t+1)}, \bm{p}^{(t+1)})$.
 \end{enumerate}
 \end{frame}
@@ -237,7 +237,7 @@ The short answer:
 We are interested in expecations of the form $\int f(\bm{q}){\color{red}\pi(\bm{q})}d\bm{q}$.
 \begin{itemize}
 \item Naively: focus on areas where ${\color{red}\pi(\bm{q})}$ (density) is large.
-\item Better: where where ${\color{red}\pi(\bm{q})}d\bm{q}$ (mass) is large.
+\item Better: where where ${\color{red}\pi(\bm{q})}d\bm{q}$ (mass) is large; ``typical set.''
 \end{itemize}
 \begin{center}
 Typical Set:\\
@@ -1063,17 +1063,21 @@ Stan's major advantages:
 \includegraphics[width = 0.5\textwidth]{center.png}\\
 \includegraphics[width = 0.9\textwidth]{hmctable.png}
 \end{center}
-From \textbf{HMC for Hierarchical Models}:\url{https://arxiv.org/pdf/1312.0906.pdf}
+From \textbf{HMC for Hierarchical Models}: \\
+\ \ \ \ \ \url{https://arxiv.org/pdf/1312.0906.pdf}
 \end{frame}
 
 \begin{frame}[fragile]
 \frametitle{Coming Soon: Riemannian HMC (and more)}
 Good Riemannian HMC deals with all of this without user input.\\~\\
+
+Momentum distribution $\bm{p}|\bm{q} \sim \mathrm{N}(\bm{0}, \bm{M}(\bm{q}))$.\\~\\
 From the manual:
 \begin{center}
-\includegraphics[width=0.6\textwidth]{stanfuture.png}
+\includegraphics[width=0.5\textwidth]{stanfuture.png}
 \end{center}
-Implementation problem: now need the Hessian of the target density. They're working on it.
+Good results from setting $\bm{M}$ to a function of the Hessian of $\pi(\bm{q})$.\\
+ $\implies$ need second order \verb0autodiff0. They're working on it.
 \end{frame}
 
 \begin{frame}
