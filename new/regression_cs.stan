@@ -23,19 +23,16 @@ transformed data {
   real alpha_cs_prior_loc;
   real<lower = 0> alpha_cs_prior_scale;
   real<lower = 0> sig_cs_prior_scale;
-
   // center and scale y
   y_mn = mean(y);
   y_sd = sd(y);
   y_cs = (y - y_mn)/y_sd;
-
   // center and scale x
   for(i in 1:n_cov){
     x_mn[i] = mean(x[,i]);
     x_sd[i] = sd(x[,i]);
     x_cs[,i] = (x[,i] - x_mn[i]) / x_sd[i];
   }
-
   // priors on _cs parameters
   x_mnsd = x_mn ./ x_sd;
   beta_cs_prior_mn = x_sd * beta_prior_mn / y_sd;
@@ -44,7 +41,6 @@ transformed data {
   alpha_cs_prior_scale = alpha_prior_scale / y_sd;
   sig_cs_prior_scale = sig_prior_scale / y_sd;
 }
-
 parameters {
   real alpha_cs;
   vector[n_cov] beta_cs;
@@ -53,7 +49,7 @@ parameters {
 model {
   y_cs ~ normal(alpha_cs + x_cs*beta_cs, sigma_cs);
   beta_cs ~ normal(beta_cs_prior_mn, beta_cs_prior_sd);
-  alpha_cs ~ normal(alpha_cs_prior_loc + dot_product(x_mnsd, beta_cs), alpha_cs_prior_scale);
+  alpha_cs ~ cauchy(alpha_cs_prior_loc + dot_product(x_mnsd, beta_cs), alpha_cs_prior_scale);
   sigma_cs ~ student_t(sig_prior_df, 0, sig_cs_prior_scale);
 }
 generated quantities {

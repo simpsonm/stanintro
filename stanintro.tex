@@ -303,30 +303,51 @@ A shorter intro with a different emphasis:
 
 \begin{frame}[fragile]
 \frametitle{Using Stan: A Simple Example}
-Running example: modeling U.S. county level income as a function of covariates.\\~\\
+Running example: regression with observation errors.\\~\\
 
-(See \verb0stanintro.R0 for construction of covariates.)
-\begin{align*}
-y_i & = \mbox{mean household income in county $i$},\\
-\bm{x}_i' & = \mbox{education and race covariates for county $i$}.
-\end{align*}
-The regression model:
+Fake data generated in \verb0stanintro.R0:
+{\tiny
+\begin{verbatim}
+n <- 100
+alpha <- 150
+beta <- c(0.05, 100, -.003)
+x <- cbind(runif(n, -1, 1)*100, rnorm(n)/10 + 10, rgamma(n, 1, 1/100))
+sigma <- 10
+ses <- 10*rep(sigma, n)
+theta <- rnorm(n, alpha + x%*%beta, sigma)
+y <- rnorm(n, theta, ses)
+\end{verbatim}
+}
+
+Start by ignoring observation errors:
 \begin{align*}
 y_i \stackrel{ind}{\sim} \mathrm{N}(\alpha + \bm{x}_i'\bm{\beta}, \sigma^2)
 \end{align*}
-for $i=1,2,\dots,N$.
+for $i=1,2,\dots,N$, with independent priors:
+\begin{align*}
+\alpha &\sim \mathrm{Cauchy}(100, 1000^2),\\
+\beta_k&\stackrel{iid}{\sim} \mathrm{N}(10, 100^2),\\
+\sigma&\sim \mathrm{half-T}_{d_{\sigma}}(0, 100^2).
+\end{align*}
 \end{frame}
 
 
 \begin{frame}[fragile]
 \frametitle{Using Stan: A Simple Example}
-Define the model in a \verb0.stan0 file, e.g.:
+Define the model in a \verb0.stan0 file, e.g. \verb0regression.stan0:
+{\tiny
 \begin{verbatim}
 data {
   int<lower = 1> n_obs;
   int<lower = 1> n_cov;
   vector[n_obs] y;
   matrix[n_obs, n_cov] x;
+  real beta_prior_mn;
+  real<lower = 0> beta_prior_sd;
+  real alpha_prior_loc;
+  real<lower = 0> alpha_prior_scale;
+  real<lower = 0> sig_prior_scale;
+  real<lower = 0> sig_prior_df;
 }
 parameters {
   real alpha;
@@ -335,11 +356,12 @@ parameters {
 }
 model {
   y ~ normal(alpha + x*beta, sigma);
-  alpha ~ normal(60000, 20000);
-  beta ~ normal(0, 20000);
-  sigma ~ student_t(5, 0, 20000);
+  alpha ~ cauchy(alpha_prior_loc, alpha_prior_scale);
+  beta ~ normal(beta_prior_mn, beta_prior_sd);
+  sigma ~ student_t(sig_prior_df, 0, sig_prior_scale);
 }
 \end{verbatim}
+}
 \end{frame}
 
 \begin{frame}[fragile]
@@ -430,7 +452,7 @@ E[1,1:4,1:4];      // top left 4x4 submatrix of 1st matrix
 
 \begin{frame}[fragile]
 \frametitle{Data block}
-Define all data that will be read into Stan. Ex: \verb0regression.stan0
+Define all data that will be read into Stan. \verb0regression.stan0:
 \begin{verbatim}
 data {
   int<lower = 1> n_obs;
@@ -439,8 +461,8 @@ data {
   matrix[n_obs, n_cov] x;
   real beta_prior_mn;
   real<lower = 0> beta_prior_sd;
-  real alpha_prior_mn;
-  real<lower = 0> alpha_prior_sd;
+  real alpha_prior_loc;
+  real<lower = 0> alpha_prior_scale;
   real<lower = 0> sig_prior_scale;
   real<lower = 0> sig_prior_df;
 }
@@ -452,8 +474,7 @@ Any constraints are checked once before the sampler is run.
 
 \begin{frame}[fragile]
 \frametitle{Parameters block}
-Define all parameters in the model.\\~\\
-Example from \verb0regression.stan0:
+Define all parameters in the model. \verb0regression.stan0:
 \begin{verbatim}
 parameters {
   real alpha;
@@ -472,11 +493,10 @@ Stan automatically transforms constrained parameters to unconstrained Euclidean 
 
 \begin{frame}[fragile]
 \frametitle{Model block}
-Define the model in terms of parameters and data.\\~\\
-Example from \verb0regression.stan0:
+Define the model in terms of parameters and data. \verb0regression.stan0:
 \begin{verbatim}
   y ~ normal(alpha + x*beta, sigma);
-  alpha ~ normal(alpha_prior_mn, alpha_prior_sd);
+  alpha ~ cauchy(alpha_prior_loc, alpha_prior_scale);
   beta ~ normal(beta_prior_mn, beta_prior_sd);
   sigma ~ student_t(sig_prior_df, 0, sig_prior_scale);
 \end{verbatim}
@@ -538,21 +558,19 @@ Upshot: vectorize wherever you can (see manual).
 Fitting a regression:
 \begin{verbatim}
 ## create list of all variables in the data block
-regdat <- list(n_obs = nrow(codata), n_cov = ncol(x.base),
-          y = codata$income.mean, x = x.base,
-          beta_prior_mn = 0, beta_prior_sd = 20000,
-          alpha_prior_mn = 60000, alpha_prior_sd = 20000,
-          sig_prior_scale = 20000, sig_prior_df = 5)
+regdat <- list(n_obs = n, n_cov = length(beta), y = y, x = x,
+               alpha_prior_loc = 100, alpha_prior_scale = 1000,
+               beta_prior_mn = 10, beta_prior_sd = 100,
+               sig_prior_df = 5, sig_prior_scale = 100)
 
-## initialize: create the model and check data constraints
-## (takes a good 15-30 seconds)
-regfit0 = stan("regression.stan", data = regdat,
-            chains = 1, iter = 1)
+## initialize the model; takes 15-30 seconds
+regfit0 <- stan("regression.stan", data = regdat, chains = 1, iter = 1)
 ## ignore compiler warnings
 
-## fit the model (only need to initialize once)
-regfit = stan(fit = regfit0, data = regdat, cores = 4,
-           chains = 4, warmup = 2000, iter = 4000)
+## sample the model
+regfit <- stan(fit = regfit0, data = regdat, cores = 4, chains = 4,
+              warmup = 2000, iter = 4000, open_progress = FALSE)
+## about 3 minutes to fit per chain
 \end{verbatim}
 \end{frame}
 
@@ -594,10 +612,10 @@ warning: "BOOST_NO_CXX11_RVALUE_REFERENCES" redefined
 > regfit = stan(fit = regfit0, data = regdat, cores = 4,
 +          chains = 4, warmup = 2000, iter = 4000)
 ...
-Chain 1, Iteration: 4000 / 4000 [100%]  (Sampling)
- Elapsed Time: 51.28 seconds (Warm-up)
-               38.532 seconds (Sampling)
-               89.812 seconds (Total)
+Chain 4, Iteration: 4000 / 4000 [100%]  (Sampling)
+ Elapsed Time: 79.7899 seconds (Warm-up)
+               96.0802 seconds (Sampling)
+               175.87 seconds (Total)
 \end{verbatim}
 \end{frame}
 
@@ -605,58 +623,45 @@ Chain 1, Iteration: 4000 / 4000 [100%]  (Sampling)
 \frametitle{Traceplots}
 \verb0> traceplot(regfit, pars = c("alpha", "beta"))0
 \begin{center}
-\includegraphics[width = 0.99\textwidth]{regtrace1.png}
+\includegraphics[width = 0.99\textwidth]{new/traceplot1.png}
 \end{center}
 \end{frame}
 
 \begin{frame}[fragile]
 \frametitle{More Traceplots}
+{\tiny
 \begin{verbatim}
-> traceplot(regfit,
-+  pars = c(paste("beta[", 1:3, "]", sep=""), "sigma"))
+> traceplot(regfit, pars = c("alpha", paste("beta[", 1:2, "]", sep=""), "sigma"))
 \end{verbatim}
+}
 \begin{center}
-\includegraphics[width = 0.99\textwidth]{regtrace2.png}
+\includegraphics[width = 0.99\textwidth]{new/traceplot2.png}
 \end{center}
 \end{frame}
 
 \begin{frame}[fragile]
 \frametitle{Posterior Summaries}
-\tiny{
+{\tiny
 \begin{verbatim}
-> summary(regfit, pars = c("alpha", "beta", "sigma"))$summary
-                  mean      se_mean          sd        2.5%          25%
-alpha     71399.869821  84.94908998 3938.516308  63689.9678  68746.88233
-beta[1]   -3551.058747   6.26461887  489.504511  -4522.1539  -3873.28857
-beta[2]   63251.705576  64.16739808 5145.175179  53114.7035  59754.63962
-beta[3]   22419.975765  45.58024712 3771.151469  14939.3834  19849.17895
-beta[4]  -11424.187414  91.62543117 7604.783988 -26123.4236 -16528.42301
-beta[5]       8.222437   1.30817829  111.458389   -212.2165    -67.37313
-beta[6]  -26285.741524  96.51512551 5748.283846 -37469.5113 -30101.28221
-beta[7]  -63841.417321 120.38712152 6874.102743 -77235.3078 -68536.56421
-beta[8]  -12118.477929  44.03565139 2230.542000 -16481.2903 -13615.97501
-beta[9]  -26595.696705  69.79832336 3910.493582 -34157.9793 -29214.67677
-beta[10] -17089.068001 112.51467271 6941.976014 -30492.6935 -21873.41458
-beta[11]  81749.431910 115.67307042 5624.916358  70767.5652  77925.54102
-sigma      9049.495580   1.40047729  115.141941   8831.0488   8970.70867
-lp__     -30209.057602   0.04393621    2.559298 -30214.9288 -30210.55878
-                   50%          75%       97.5%    n_eff      Rhat
-alpha     71391.759269  74043.63345  79140.4871 2149.551 1.0008773
-beta[1]   -3550.100262  -3217.50867  -2593.4421 6105.540 0.9998866
-beta[2]   63251.123712  66745.33228  73248.2005 6429.415 1.0003574
-beta[3]   22429.869178  24978.31383  29683.4286 6845.333 0.9996002
-beta[4]  -11532.083317  -6253.10872   3440.9387 6888.770 1.0001511
-beta[5]       7.641381     83.44036    228.8966 7259.248 1.0005791
-beta[6]  -26343.125976 -22457.52170 -15092.0916 3547.200 0.9997183
-beta[7]  -63924.700591 -59193.35899 -50219.5088 3260.408 1.0005047
-beta[8]  -12103.518865 -10620.56975  -7700.9977 2565.736 1.0007448
-beta[9]  -26561.026938 -23967.36268 -18947.1339 3138.869 1.0006779
-beta[10] -17026.910436 -12399.28093  -3668.6178 3806.693 1.0002487
-beta[11]  81754.468636  85563.39644  92635.6943 2364.654 1.0005060
-sigma      9047.818999   9127.68236   9276.6519 6759.506 0.9997143
-lp__     -30208.734992 -30207.18270 -30205.0836 3393.100 1.0014618
+> summary(regfit)$summary
+                 mean      se_mean          sd         2.5%           25%
+alpha    601.47469242 11.155331426 593.8138899 -490.6827947  191.95702515
+beta[1]   -0.10907827  0.002090211   0.1628532   -0.4288071   -0.21721217
+beta[2]   54.30721025  1.113999466  59.3528808  -67.0703765   16.13727134
+beta[3]    0.02146048  0.001504924   0.1060208   -0.1860389   -0.05051183
+sigma     90.81032505  0.088702720   6.7013775   78.7561024   86.06563171
+lp__    -496.94003128  0.028859472   1.6090604 -500.9452935 -497.77083742
+                  50%           75%        97.5%    n_eff      Rhat
+alpha    570.66425923  9.840412e+02 1823.5656680 2833.582 1.0024421
+beta[1]   -0.10911846  4.565740e-04    0.2095149 6070.329 1.0000127
+beta[2]   57.29746473  9.525990e+01  163.6458877 2838.662 1.0024554
+beta[3]    0.02158836  9.293641e-02    0.2261381 4963.105 0.9998738
+sigma     90.37856417  9.514879e+01  105.0946718 5707.610 0.9998136
+lp__    -496.63425539 -4.957597e+02 -494.7635700 3108.622 1.0010516
 \end{verbatim}
 }
+Can also specify which parameters you want summaries of, e.g. 
+\verb0> summary(regfit, pars = c("beta"))$summary0
 \end{frame}
 
 \begin{frame}[fragile]
@@ -682,34 +687,43 @@ Extract posterior draws into a named list:
 > regfitdraws <- extract(regfit)
 > str(regfitdraws, 1)
 List of 4
- $ alpha: num [1:8000(1d)] 65076 74078 62241 78395 68850 ...
- $ beta : num [1:8000, 1:11] -2995 -3533 -3492 -3856 -3685 ...
- $ sigma: num [1:8000(1d)] 9174 8926 9124 9074 8982 ...
- $ lp__ : num [1:8000(1d)] -30212 -30208 -30211 -30206 -30210 ...
+ $ alpha: num [1:8000(1d)] 1942.1 30.9 158.2 824.3 1634.2 ...
+ $ beta : num [1:8000, 1:3] -0.278 -0.124 -0.1108 -0.1193 -0.0119 ...
+ $ sigma: num [1:8000(1d)] 100.1 99 91.5 81.6 93.2 ...
+ $ lp__ : num [1:8000(1d)] -499 -497 -495 -497 -497 ...
 \end{verbatim}
 }
 \end{frame}
 
 \begin{frame}[fragile]
 \frametitle{Transformed data and parameters}
-Transformed data: transform once before running MCMC.\\
-Transformed parameters: transform once per leapfrog step.\\
+Transformed data: transform once before running MCMC.\\~\\
+
+Transformed parameters: transform once per leapfrog step.\\~\\
+
+For example:
+{\tiny
 \begin{verbatim}
-data { ... }
+data { 
+  ... 
+}
 transformed data {
   vector[n_obs] log_y;
   log_y = log(y);
 }
-parameters = { ... }
+parameters = { 
+  ... 
+}
 transformed parameters {
   real<lower = 0> sigma;
   sigma = sqrt(sigma2);
 }
-model { // implicit U(-Inf, Inf) prior on mu
+model { 
   log_y ~ normal(mu, sigma);
-  sigma2 ~ inv_gamma(0.5, 0.5); // this is a bad prior
+  ...
 }
 \end{verbatim}
+}
 \end{frame}
 
 \begin{frame}[fragile]
@@ -725,7 +739,7 @@ model {
   real sigma;
   sigma = sqrt(sigma2);
   log_y ~ normal(mu, sigma);
-  sigma2 ~ inv_gamma(0.5, 0.5); // this is a bad prior
+  ...
 }
 \end{verbatim}
 }
@@ -828,7 +842,7 @@ Reparameterization is often necessary to get a working sampler at all, especiall
 
 \begin{frame}[fragile]
 \frametitle{Regression with Centered and Scaled Data: Stan}
-From \verb0regression_cs.stan0. Reduce fit time from 70 to 10 secs.\\~\\
+From \verb0regression_cs.stan0. Reduce fit time from 3min to 4 secs.\\~\\
 Note: care taken to get the correct priors for the \verb0_cs0 parameters, and the correct parameter estimates back on original scale.
 {\tiny
 \begin{columns}
@@ -840,20 +854,18 @@ transformed data {
   y_mn = mean(y);
   y_sd = sd(y);
   y_cs = (y - y_mn)/y_sd;
-
   // center and scale x
   for(i in 1:n_cov){
     x_mn[i] = mean(x[,i]);
     x_sd[i] = sd(x[,i]);
     x_cs[,i] = (x[,i] - x_mn[i]) / x_sd[i];
   }
-
   // priors on _cs parameters
   x_mnsd = x_mn ./ x_sd;
   beta_cs_prior_mn = x_sd * beta_prior_mn / y_sd;
   beta_cs_prior_sd = x_sd * beta_prior_sd / y_sd;
-  alpha_cs_prior_mn = (alpha_prior_mn-y_mn)/y_sd;
-  alpha_cs_prior_sd = alpha_prior_sd / y_sd;
+  alpha_cs_prior_loc = (alpha_prior_loc-y_mn)/y_sd;
+  alpha_cs_prior_scale = alpha_prior_scale / y_sd;
   sig_cs_prior_scale = sig_prior_scale / y_sd;
 }
 \end{verbatim}
@@ -868,8 +880,7 @@ parameters {
 model {
   y_cs ~ normal(alpha_cs + x_cs*beta_cs, sigma_cs);
   beta_cs ~ normal(beta_cs_prior_mn, beta_cs_prior_sd);
-  alpha_cs ~ normal(alpha_cs_prior_mn +
-        dot_product(x_mnsd, beta_cs), alpha_cs_prior_sd);
+  alpha_cs ~ cauchy(alpha_cs_prior_loc + dot_product(x_mnsd, beta_cs), alpha_cs_prior_scale);
   sigma_cs ~ student_t(sig_prior_df, 0, sig_cs_prior_scale);
 }
 generated quantities {
@@ -878,8 +889,7 @@ generated quantities {
   real<lower = 0> sigma;
 
   beta = (beta_cs ./ x_sd) * y_sd;
-  alpha = alpha_cs * y_sd -
-          dot_product(x_mn, beta) + y_mn;
+  alpha = alpha_cs * y_sd - dot_product(x_mn, beta) + y_mn;
   sigma = sigma_cs * y_sd;
 }
 \end{verbatim}
@@ -889,53 +899,107 @@ generated quantities {
 
 \begin{frame}[fragile]
 \frametitle{Dealing with Hierarchical Models}
-Example: same regression, now with region-level random intercepts.\\~\\
-Let $r[i]$ denote the state that county $i$ is in, and $\alpha_r$ denote the intercept for state $r$.\\~\\
+Example: same regression, now taking into account observation errors.\\~\\
+
 Now we specify the model directly on centered and scaled $y_i$ and $\bm{x}_i'$:
 \begin{align*}
-y_i | \bm{\alpha} \stackrel{ind}{\sim} \mathrm{N}(\alpha_{r[i]} + \bm{x}_i'\bm{\beta}, \sigma^2), && \alpha_r \stackrel{iid}{\sim} \mathrm{N}(\mu_{\alpha}, \sigma_{\alpha}^2),
+y_i &\stackrel{ind}{\sim} \mathrm{N}(\theta_i, s_i^2),\\
+\theta_i &\stackrel{ind}{\sim} \mathrm{N}(\alpha + \bm{x}_i'\bm{\beta}, \sigma^2),
 \end{align*}
-for $i=1,2,\dots,N$, $r=1,2,\dots,R$.
+for $i=1,2,\dots,N$, where the $s_i$s are the known observation SEs.
 \end{frame}
 
 \begin{frame}[fragile]
-\frametitle{Random Intercept Regression in Stan}
-From \verb0rand_intercept_reg.stan0 (about 20 seconds to fit):
+\frametitle{Known Observation Error Variances in Stan}
+From \verb0reg_error.stan0 (about 1 minute to fit):
 {\tiny
+\begin{columns}
+\begin{column}{0.45\textwidth}
+\begin{verbatim}
+data {
+  int<lower = 1> n_obs;
+  int<lower = 1> n_cov;
+  vector[n_obs] y;
+  vector<lower = 0>[n_obs] y_se;
+  matrix[n_obs, n_cov] x;
+  real beta_prior_mn;
+  real<lower = 0> beta_prior_sd;
+  real alpha_prior_loc;
+  real<lower = 0> alpha_prior_scale;
+  real<lower = 0> sig_prior_scale;
+  real<lower = 0> sig_prior_df;
+}
+transformed data {
+  vector[n_obs] y_cs;
+  vector<lower = 0>[n_obs] y_cs_se;
+  matrix[n_obs, n_cov] x_cs;
+  real y_mn;
+  real<lower = 0> y_sd;
+  vector[n_cov] x_mn;
+  vector<lower = 0>[n_cov] x_sd;
+  // center and scale y
+  y_mn = mean(y);
+  y_sd = sd(y);
+  y_cs = (y - y_mn)/y_sd;
+  y_cs_se = y_se/y_sd;
+  // center and scale x
+  for(i in 1:n_cov){
+    x_mn[i] = mean(x[,i]);
+    x_sd[i] = sd(x[,i]);
+    x_cs[,i] = (x[,i] - x_mn[i]) / x_sd[i];
+  }
+}
+\end{verbatim}
+\end{column}
+\begin{column}{0.55\textwidth}
 \begin{verbatim}
 parameters {
-  vector[n_cov] beta;
-  real<lower = 0> sigma;
-  vector[n_region] alpha;
-  real mu_alpha;
-  real<lower = 0> sigma_alpha;
+  real alpha_cs;
+  vector[n_cov] beta_cs;
+  vector[n_obs] theta_cs;
+  real<lower = 0> sigma_cs;
 }
 model {
-  y_cs ~ normal(region*alpha + x_cs*beta, sigma);
-  alpha ~ normal(mu_alpha, sigma_alpha);
-  beta ~ normal(0, 10);
-  sigma ~ student_t(5, 0, 10);
-  mu_alpha ~ normal(0, 10);
-  sigma_alpha ~ student_t(5, 0, 10);
+  y_cs ~ normal(theta_cs, y_cs_se);
+  theta_cs ~ normal(alpha_cs + x_cs*beta_cs, sigma_cs);
+  beta_cs ~ normal(beta_prior_mn, beta_prior_sd);
+  alpha_cs ~ cauchy(alpha_prior_loc, alpha_prior_scale);
+  sigma_cs ~ student_t(sig_prior_df, 0, sig_prior_scale);
 }
-\end{verbatim}}
-Problems:
+generated quantities {
+  real alpha;
+  vector[n_cov] beta;
+  real<lower = 0> sigma;
+  vector[n_obs] theta;
+  beta = (beta_cs ./ x_sd) * y_sd;
+  alpha = alpha_cs * y_sd - dot_product(x_mn, beta) + y_mn;
+  sigma = sigma_cs * y_sd;
+  theta = theta_cs * y_sd + y_mn;
+}
+\end{verbatim}
+\end{column}
+\end{columns}
+}
+\end{frame}
+
+\begin{frame}[fragile]
+\frametitle{Problems}
 {\tiny
 \begin{verbatim}
-> randintfit <- stan(fit = randintfit0, data = randintdat, cores = 4, chains = 4,
-+                    warmup = 2000, iter = 4000, open_progress = FALSE)
-...
-[1] "The following numerical problems occured the indicated number of times on chain 4"
-                                                                                count
-Exception thrown at line 37: normal_log: Scale parameter is 0, but must be > 0!     3
-[1] "When a numerical problem occurs, the Hamiltonian proposal gets rejected."
-[1] "See http://mc-stan.org/misc/warnings.html#exception-hamiltonian-proposal-rejected"
-[1] "If the number in the 'count' column is small,  do not ask about this message on stan-users."
+> regerrordat <- list(n_obs = n, n_cov = length(beta), y = y, x = x, y_se = ses,
++                     alpha_prior_loc = 0, alpha_prior_scale = 10,
++                     beta_prior_mn = 0, beta_prior_sd = 10,
++                     sig_prior_df = 5, sig_prior_scale = 10)
+> regerrorfit <- stan(fit = regerrorfit0, data = regerrordat, cores = 4, chains = 4,
+                      warmup = 2000, iter = 4000, open_progress = FALSE)
 Warning messages:
-1: There were 1146 divergent transitions after warmup. Increasing adapt_delta above 0.8 may help. See
-http://mc-stan.org/misc/warnings.html#divergent-transitions-after-warmup
-2: Examine the pairs() plot to diagnose sampling problems
+1: There were 119 divergent transitions after warmup. Increasing adapt_delta above 0.8 may help. See
+http://mc-stan.org/misc/warnings.html#divergent-transitions-after-warmup 
+2: There were 4 chains where the estimated Bayesian Fraction of Missing Information was low. See
+http://mc-stan.org/misc/warnings.html#bfmi-low 
+3: Examine the pairs() plot to diagnose sampling problems
 \end{verbatim}}
+
 \end{frame}
 
 \begin{frame}[fragile]
@@ -951,7 +1015,7 @@ Exception ... Hamiltonian proposal rejected: {\tiny\verb9Exception thrown at lin
 \end{itemize}
 \end{itemize}
 
-Low Bayesian Fraction of Missing Information:
+Low Bayesian Fraction of Missing Information (BFMI):
 \begin{itemize}
 \item Indicates that the adaptation turned out poorly and the chain did not properly explore the posterior.
 \item Can solve by increasing \verb0warmup0 or reparameterizing.
@@ -960,7 +1024,7 @@ Low Bayesian Fraction of Missing Information:
 
 \begin{frame}[fragile]
 \frametitle{Focus on Divergent Transitions}
-Divergent transitions after warmup: {\tiny\verb91: There were 1146 divergent transitions after warmup. Increasing adapt_delta above 0.8 may help.9}
+Divergent transitions after warmup: {\tiny\verb61: There were 119 divergent transitions after warmup. Increasing adapt_delta above 0.8 may help.6}
 \vspace{-0.4cm}
 \begin{itemize}
 \item Indicates that geometric ergodicity is breaking down. \textbf{\emph{Just one divergent transition is enough to be concerning.}}
@@ -997,10 +1061,10 @@ How to fix this?
 \begin{frame}[fragile]
 \frametitle{Centered vs. noncentered parameterizations}
 \begin{align*}
-y_i &\sim \mathrm{N}(\alpha_{r[i]} + \bm{x}_i'\bm{\beta}, \sigma^2), && \alpha_r \sim \mathrm{N}(\mu_{\alpha}, \sigma_{\alpha}^2); && \mbox{(centered)}\\
-y_i &\sim \mathrm{N}(\mu_{\alpha} + \sigma_{\alpha}\varepsilon_{r[i]} + \bm{x}_i'\bm{\beta}, \sigma^2), && \varepsilon_r \sim \mathrm{N}(0, 1). && \mbox{(noncentered)}\\
+y_i &\stackrel{ind}{\sim}\mathrm{N}(\theta_i, s_i^2) && \theta_i \stackrel{ind}{\sim} \mathrm{N}(\alpha + \bm{x}_i'\bm{\beta}, \sigma^2); && \mbox{(centered)}\\
+y_i &\stackrel{ind}{\sim} \mathrm{N}(\alpha + \bm{x}_i'\bm{\beta} + \sigma\varepsilon_{i}, s_i^2), && \varepsilon_i \stackrel{iid}{\sim} \mathrm{N}(0, 1). && \mbox{(noncentered)}\\
 \end{align*}
-Define the signal-to-noise ratio: $\sigma_{\alpha}^2/\sigma^2$.\\~\\
+Define the signal-to-noise ratio: $\sigma^2/\overline{s}^2$.\\~\\
 
 Centered parameterization:
 \begin{itemize}
@@ -1009,47 +1073,45 @@ Centered parameterization:
 \end{itemize}
 Noncentered parameterization:
 \begin{itemize}
-\item Usually found by centering and scaling: $\varepsilon_r = (\alpha_r - \mu_{\alpha})/\sigma_{\alpha}$.
+\item Usually found by centering and scaling: $\varepsilon_i = (\theta_i - \alpha - \bm{x}_i'\bm{\beta})/\sigma$.
 \item Results in easy MCMC when the signal-to-noise ratio is small.
 \end{itemize}
 \end{frame}
 
 \begin{frame}[fragile]
-\frametitle{Noncentered Random Intercept Regression}
-From \verb0rand_intercept_reg_noncen.stan0 (about 15 min to fit):
+\frametitle{Noncentered Regression with Observation Errors}
+From \verb0reg_error_nc.stan0 (about 30 seconds per chain):
 {\tiny
 \begin{verbatim}
 parameters {
-  vector[n_cov] beta;
-  real<lower = 0> sigma;
-  vector[n_region] alpha_raw; // "noncentered" intercepts
-  real mu_alpha;
-  real<lower = 0> sigma_alpha;
+  real alpha_cs;
+  vector[n_cov] beta_cs;
+  vector[n_obs] theta_cs_raw;
+  real<lower = 0> sigma_cs;
+}
+transformed parameters{
+  vector[n_obs] theta_cs;
+  theta_cs = theta_cs_raw*sigma_cs + alpha_cs + x_cs*beta_cs;
 }
 model {
-  vector[n_region] alpha;
-  alpha = mu_alpha + sigma_alpha * alpha_raw;
-  y_cs ~ normal(region*alpha + x_cs*beta, sigma);
-  alpha_raw ~ normal(0, 1);
-  beta ~ normal(0, 10);
-  sigma ~ student_t(5, 0, 10);
-  mu_alpha ~ normal(0, 10);
-  sigma_alpha ~ student_t(5, 0, 10);
+  y_cs ~ normal(theta_cs, y_cs_se);
+  theta_cs_raw ~ normal(0, 1);
+  beta_cs ~ normal(beta_prior_mn, beta_prior_sd);
+  alpha_cs ~ cauchy(alpha_prior_loc, alpha_prior_scale);
+  sigma_cs ~ student_t(sig_prior_df, 0, sig_prior_scale);
+}
+generated quantities {
+  real alpha;
+  vector[n_cov] beta;
+  real<lower = 0> sigma;
+  vector[n_obs] theta;
+  beta = (beta_cs ./ x_sd) * y_sd;
+  alpha = alpha_cs * y_sd - dot_product(x_mn, beta) + y_mn;
+  sigma = sigma_cs * y_sd;
+  theta = theta_cs * y_sd + y_mn;
 }
 \end{verbatim}}
-Less divergent transitions with this parameterization:
-{\tiny
-\begin{verbatim}
-1: There were 701 divergent transitions after warmup. Increasing adapt_delta above 0.8 may help.
-\end{verbatim}}
-Now try increasing \verb0adapt_delta0 (default = 0.8):
-{\tiny
-\begin{verbatim}
-> randintncfit2 <- stan(fit = randintncfit, data = randintdat, cores = 4, chains = 4,
-+                       warmup = 2000, iter = 4000, open_progress = FALSE,
-+                       control = list(adapt_delta = 0.999))
-\end{verbatim}}
-yields 0 divergent transitions in about 15 minutes.
+No divergent transitions or low BFMI with this parameterization.
 \end{frame}
 
 \begin{frame}[fragile]
