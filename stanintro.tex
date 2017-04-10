@@ -519,7 +519,7 @@ Use `\verb0 .* 0' and `\verb0 ./ 0' for elementwise operations.\\
 
 Otherwise, most things work just like \verb0R0, except Stan is finicky about dimensions matching (this is good for catching errors).
 \begin{itemize}
-\item other differences: \verb0||0 for `or', \verb0&&0 for 'and', \verb0X'0 for $X$ transpose.\\~\\
+\item other differences: \verb0||0 for `or', \verb0&&0 for `and', \verb0X'0 for $X$ transpose.\\~\\
 \end{itemize}
 
 Check the manual for efficient specialized functions for many common linear algebra (and other) operations, e.g.:
@@ -556,6 +556,7 @@ Upshot: vectorize wherever you can (see manual).
 \begin{frame}[fragile]
 \frametitle{Fitting the model in R}
 Fitting a regression:
+{\footnotesize
 \begin{verbatim}
 ## create list of all variables in the data block
 regdat <- list(n_obs = n, n_cov = length(beta), y = y, x = x,
@@ -572,6 +573,7 @@ regfit <- stan(fit = regfit0, data = regdat, cores = 4, chains = 4,
               warmup = 2000, iter = 4000, open_progress = FALSE)
 ## about 3 minutes to fit per chain
 \end{verbatim}
+}
 \end{frame}
 
 \begin{frame}[fragile]
@@ -584,8 +586,7 @@ Required arguments:
 \end{itemize}
 Useful named arguments and their defaults:
 \begin{itemize}
-\item \verb0cores = 10 --- number of cores to use, w/ \verb0parallel0 backend.
-\vspace{-.3cm}
+\item \verb0cores = 10 --- number of cores to use.
 \begin{itemize}
 \item Parallelizes \emph{across} chains, not within.
 \end{itemize}
@@ -660,7 +661,7 @@ sigma     90.37856417  9.514879e+01  105.0946718 5707.610 0.9998136
 lp__    -496.63425539 -4.957597e+02 -494.7635700 3108.622 1.0010516
 \end{verbatim}
 }
-Can also specify which parameters you want summaries of, e.g. 
+Can also specify which parameters you want summaries of, e.g.
 \verb0> summary(regfit, pars = c("beta"))$summary0
 \end{frame}
 
@@ -695,6 +696,116 @@ List of 4
 }
 \end{frame}
 
+
+\begin{frame}[fragile]
+\frametitle{Regression with Centered and Scaled Data}
+Adapted from \verb0regression_cs.stan0.\\
+\begin{columns}
+\begin{column}{0.45\textwidth}
+{\tiny
+\begin{verbatim}
+data {
+  ...
+}
+transformed data {
+  vector[n_obs] y_cs;
+  matrix[n_obs, n_cov] x_cs;
+  real y_mn;
+  real<lower = 0> y_sd;
+  vector[n_cov] x_mn;
+  vector<lower = 0>[n_cov] x_sd;
+
+  // center and scale y
+  y_mn = mean(y);
+  y_sd = sd(y);
+  y_cs = (y - y_mn)/y_sd;
+
+  // center and scale x
+  for(i in 1:n_cov){
+    x_mn[i] = mean(x[,i]);
+    x_sd[i] = sd(x[,i]);
+    x_cs[,i] = (x[,i] - x_mn[i]) / x_sd[i];
+  }
+}
+parameters {
+  real alpha_cs;
+  vector[n_cov] beta_cs;
+  real<lower = 0> sigma_cs;
+}
+\end{verbatim}
+}
+\end{column}
+\begin{column}{0.55\textwidth}
+This model is equivalent to \verb0regression.stan0 as long as:\\~\\
+\begin{itemize}
+\item We translate the priors on \verb0alpha0, \verb0beta0, and \verb0sigma0 into priors on their \verb0_cs0 versions.\\~\\
+\item We transform back to \verb0alpha0, \verb0beta0, and \verb0sigma0 if that is what we want to do inference on.
+\end{itemize}
+\end{column}
+\end{columns}
+\end{frame}
+
+\begin{frame}[fragile]
+\frametitle{Carefully Taking Into Account Transformations}
+From \verb0regression_cs.stan0 (see file for full text).
+{\tiny
+\begin{columns}
+\begin{column}{0.45\textwidth}
+\begin{verbatim}
+transformed data {
+  ...
+  // center and scale y
+  y_mn = mean(y);
+  y_sd = sd(y);
+  y_cs = (y - y_mn)/y_sd;
+
+  // center and scale x
+  for(i in 1:n_cov){
+    x_mn[i] = mean(x[,i]);
+    x_sd[i] = sd(x[,i]);
+    x_cs[,i] = (x[,i] - x_mn[i]) / x_sd[i];
+  }
+
+  // priors on _cs parameters
+  x_mnsd = x_mn ./ x_sd;
+  beta_cs_prior_mn = x_sd * beta_prior_mn / y_sd;
+  beta_cs_prior_sd = x_sd * beta_prior_sd / y_sd;
+  alpha_cs_prior_loc = (alpha_prior_loc-y_mn)/y_sd;
+  alpha_cs_prior_scale = alpha_prior_scale / y_sd;
+  sig_cs_prior_scale = sig_prior_scale / y_sd;
+}
+\end{verbatim}
+\end{column}
+\begin{column}{0.55\textwidth}
+\begin{verbatim}
+parameters {
+  real alpha_cs;
+  vector[n_cov] beta_cs;
+  real<lower = 0> sigma_cs;
+}
+model {
+  y_cs ~ normal(alpha_cs + x_cs*beta_cs, sigma_cs);
+  beta_cs ~ normal(beta_cs_prior_mn, beta_cs_prior_sd);
+  alpha_cs ~ cauchy(alpha_cs_prior_loc + dot_product(x_mnsd, beta_cs), alpha_cs_prior_scale);
+  sigma_cs ~ student_t(sig_prior_df, 0, sig_cs_prior_scale);
+}
+generated quantities {
+  real alpha;
+  vector[n_cov] beta;
+  real<lower = 0> sigma;
+
+  beta = (beta_cs ./ x_sd) * y_sd;
+  alpha = alpha_cs * y_sd - dot_product(x_mn, beta) + y_mn;
+  sigma = sigma_cs * y_sd;
+}
+\end{verbatim}
+\end{column}
+\end{columns}}
+\vspace{.5cm}
+Reduces fit time per chain from 3 minutes to 4 seconds.
+\end{frame}
+
+
 \begin{frame}[fragile]
 \frametitle{Transformed data and parameters}
 Transformed data: transform once before running MCMC.\\~\\
@@ -704,21 +815,21 @@ Transformed parameters: transform once per leapfrog step.\\~\\
 For example:
 {\tiny
 \begin{verbatim}
-data { 
-  ... 
+data {
+  ...
 }
 transformed data {
   vector[n_obs] log_y;
   log_y = log(y);
 }
-parameters = { 
-  ... 
+parameters = {
+  ...
 }
 transformed parameters {
   real<lower = 0> sigma;
   sigma = sqrt(sigma2);
 }
-model { 
+model {
   log_y ~ normal(mu, sigma);
   ...
 }
@@ -762,21 +873,21 @@ generated quantities {
 
 \begin{frame}[fragile]
 \frametitle{Where should I put my transformation for max efficiency?}
-Transformed data block:
+\textbf{Transformed data block:}
 \begin{itemize}
 \item All pure functions of data, or other intermediate quantities that don't depend on parameters.
 \end{itemize}
-Transformed parameters block:
+\textbf{Transformed parameters block:}
 \begin{itemize}
 \item Only place to put transformations to automatically take into account the Jacobian.
-\item Any quantity that is a function of parameters and on the LHS of a sampling statement (\verb0~0).
+\item \textbf{\color{red}Any quantity that is a function of parameters and on the LHS of a sampling statement ($\sim$) must go here.}
 \item Avoid putting other quantities here because computing Jacobians is slow and unnecessary.
 \end{itemize}
-Model block:
+\textbf{Model block:}
 \begin{itemize}
 \item Intermediate quantities used on RHS of sampling statements.
 \end{itemize}
-Generated quantities block:
+\textbf{Generated quantities block:}
 \begin{itemize}
 \item Quantities you want MCMC draws for that aren't already in the parameters or transformed parameters block.
 \end{itemize}
@@ -841,63 +952,6 @@ Reparameterization is often necessary to get a working sampler at all, especiall
 \end{frame}
 
 \begin{frame}[fragile]
-\frametitle{Regression with Centered and Scaled Data: Stan}
-From \verb0regression_cs.stan0. Reduce fit time from 3min to 4 secs.\\~\\
-Note: care taken to get the correct priors for the \verb0_cs0 parameters, and the correct parameter estimates back on original scale.
-{\tiny
-\begin{columns}
-\begin{column}{0.45\textwidth}
-\begin{verbatim}
-transformed data {
-  ...
-  // center and scale y
-  y_mn = mean(y);
-  y_sd = sd(y);
-  y_cs = (y - y_mn)/y_sd;
-  // center and scale x
-  for(i in 1:n_cov){
-    x_mn[i] = mean(x[,i]);
-    x_sd[i] = sd(x[,i]);
-    x_cs[,i] = (x[,i] - x_mn[i]) / x_sd[i];
-  }
-  // priors on _cs parameters
-  x_mnsd = x_mn ./ x_sd;
-  beta_cs_prior_mn = x_sd * beta_prior_mn / y_sd;
-  beta_cs_prior_sd = x_sd * beta_prior_sd / y_sd;
-  alpha_cs_prior_loc = (alpha_prior_loc-y_mn)/y_sd;
-  alpha_cs_prior_scale = alpha_prior_scale / y_sd;
-  sig_cs_prior_scale = sig_prior_scale / y_sd;
-}
-\end{verbatim}
-\end{column}
-\begin{column}{0.55\textwidth}
-\begin{verbatim}
-parameters {
-  real alpha_cs;
-  vector[n_cov] beta_cs;
-  real<lower = 0> sigma_cs;
-}
-model {
-  y_cs ~ normal(alpha_cs + x_cs*beta_cs, sigma_cs);
-  beta_cs ~ normal(beta_cs_prior_mn, beta_cs_prior_sd);
-  alpha_cs ~ cauchy(alpha_cs_prior_loc + dot_product(x_mnsd, beta_cs), alpha_cs_prior_scale);
-  sigma_cs ~ student_t(sig_prior_df, 0, sig_cs_prior_scale);
-}
-generated quantities {
-  real alpha;
-  vector[n_cov] beta;
-  real<lower = 0> sigma;
-
-  beta = (beta_cs ./ x_sd) * y_sd;
-  alpha = alpha_cs * y_sd - dot_product(x_mn, beta) + y_mn;
-  sigma = sigma_cs * y_sd;
-}
-\end{verbatim}
-\end{column}
-\end{columns}}
-\end{frame}
-
-\begin{frame}[fragile]
 \frametitle{Dealing with Hierarchical Models}
 Example: same regression, now taking into account observation errors.\\~\\
 
@@ -906,53 +960,25 @@ Now we specify the model directly on centered and scaled $y_i$ and $\bm{x}_i'$:
 y_i &\stackrel{ind}{\sim} \mathrm{N}(\theta_i, s_i^2),\\
 \theta_i &\stackrel{ind}{\sim} \mathrm{N}(\alpha + \bm{x}_i'\bm{\beta}, \sigma^2),
 \end{align*}
-for $i=1,2,\dots,N$, where the $s_i$s are the known observation SEs.
+for $i=1,2,\dots,N$, where $s_i$ is the known observation SE for $y_i$.
 \end{frame}
 
 \begin{frame}[fragile]
 \frametitle{Known Observation Error Variances in Stan}
 From \verb0reg_error.stan0 (about 1 minute to fit):
-{\tiny
-\begin{columns}
-\begin{column}{0.45\textwidth}
+{\scriptsize
 \begin{verbatim}
 data {
   int<lower = 1> n_obs;
   int<lower = 1> n_cov;
   vector[n_obs] y;
   vector<lower = 0>[n_obs] y_se;
-  matrix[n_obs, n_cov] x;
-  real beta_prior_mn;
-  real<lower = 0> beta_prior_sd;
-  real alpha_prior_loc;
-  real<lower = 0> alpha_prior_scale;
-  real<lower = 0> sig_prior_scale;
-  real<lower = 0> sig_prior_df;
+  ...
 }
 transformed data {
-  vector[n_obs] y_cs;
-  vector<lower = 0>[n_obs] y_cs_se;
-  matrix[n_obs, n_cov] x_cs;
-  real y_mn;
-  real<lower = 0> y_sd;
-  vector[n_cov] x_mn;
-  vector<lower = 0>[n_cov] x_sd;
-  // center and scale y
-  y_mn = mean(y);
-  y_sd = sd(y);
-  y_cs = (y - y_mn)/y_sd;
-  y_cs_se = y_se/y_sd;
-  // center and scale x
-  for(i in 1:n_cov){
-    x_mn[i] = mean(x[,i]);
-    x_sd[i] = sd(x[,i]);
-    x_cs[,i] = (x[,i] - x_mn[i]) / x_sd[i];
-  }
+  ...
+  // note: have to convert y_se to y_cs_se
 }
-\end{verbatim}
-\end{column}
-\begin{column}{0.55\textwidth}
-\begin{verbatim}
 parameters {
   real alpha_cs;
   vector[n_cov] beta_cs;
@@ -966,19 +992,7 @@ model {
   alpha_cs ~ cauchy(alpha_prior_loc, alpha_prior_scale);
   sigma_cs ~ student_t(sig_prior_df, 0, sig_prior_scale);
 }
-generated quantities {
-  real alpha;
-  vector[n_cov] beta;
-  real<lower = 0> sigma;
-  vector[n_obs] theta;
-  beta = (beta_cs ./ x_sd) * y_sd;
-  alpha = alpha_cs * y_sd - dot_product(x_mn, beta) + y_mn;
-  sigma = sigma_cs * y_sd;
-  theta = theta_cs * y_sd + y_mn;
-}
 \end{verbatim}
-\end{column}
-\end{columns}
 }
 \end{frame}
 
@@ -994,9 +1008,9 @@ generated quantities {
                       warmup = 2000, iter = 4000, open_progress = FALSE)
 Warning messages:
 1: There were 119 divergent transitions after warmup. Increasing adapt_delta above 0.8 may help. See
-http://mc-stan.org/misc/warnings.html#divergent-transitions-after-warmup 
+http://mc-stan.org/misc/warnings.html#divergent-transitions-after-warmup
 2: There were 4 chains where the estimated Bayesian Fraction of Missing Information was low. See
-http://mc-stan.org/misc/warnings.html#bfmi-low 
+http://mc-stan.org/misc/warnings.html#bfmi-low
 3: Examine the pairs() plot to diagnose sampling problems
 \end{verbatim}}
 
@@ -1049,7 +1063,7 @@ In a nutshell: these posterior distributions have weird geometries.
 \item Gibbs samplers have high autocorrelation.
 \item Random Walk Metropolis samplers have small step sizes.
 \item HMC more likely to have divergent transitions.
-\item Geometric ergodicity hard \textbf{\emph{using any method}}.\\~\\
+\item Geometric ergodicity typically fails \textbf{\emph{using any method}}.\\~\\
 \end{itemize}
 How to fix this?
 \begin{itemize}
@@ -1059,7 +1073,7 @@ How to fix this?
 \end{frame}
 
 \begin{frame}[fragile]
-\frametitle{Centered vs. noncentered parameterizations}
+\frametitle{Centered vs. noncenteredparameterizations}
 \begin{align*}
 y_i &\stackrel{ind}{\sim}\mathrm{N}(\theta_i, s_i^2) && \theta_i \stackrel{ind}{\sim} \mathrm{N}(\alpha + \bm{x}_i'\bm{\beta}, \sigma^2); && \mbox{(centered)}\\
 y_i &\stackrel{ind}{\sim} \mathrm{N}(\alpha + \bm{x}_i'\bm{\beta} + \sigma\varepsilon_{i}, s_i^2), && \varepsilon_i \stackrel{iid}{\sim} \mathrm{N}(0, 1). && \mbox{(noncentered)}\\
@@ -1080,7 +1094,7 @@ Noncentered parameterization:
 
 \begin{frame}[fragile]
 \frametitle{Noncentered Regression with Observation Errors}
-From \verb0reg_error_nc.stan0 (about 30 seconds per chain):
+From \verb0reg_error_nc.stan0 (about 30 seconds per chain):\\~\\
 {\tiny
 \begin{verbatim}
 parameters {
@@ -1099,16 +1113,6 @@ model {
   beta_cs ~ normal(beta_prior_mn, beta_prior_sd);
   alpha_cs ~ cauchy(alpha_prior_loc, alpha_prior_scale);
   sigma_cs ~ student_t(sig_prior_df, 0, sig_prior_scale);
-}
-generated quantities {
-  real alpha;
-  vector[n_cov] beta;
-  real<lower = 0> sigma;
-  vector[n_obs] theta;
-  beta = (beta_cs ./ x_sd) * y_sd;
-  alpha = alpha_cs * y_sd - dot_product(x_mn, beta) + y_mn;
-  sigma = sigma_cs * y_sd;
-  theta = theta_cs * y_sd + y_mn;
 }
 \end{verbatim}}
 No divergent transitions or low BFMI with this parameterization.
@@ -1138,7 +1142,7 @@ From the manual:
 \begin{center}
 \includegraphics[width=0.5\textwidth]{stanfuture.png}
 \end{center}
-Good results from setting $\bm{M}$ to a function of the Hessian of $\pi(\bm{q})$.\\
+Good results from setting $\bm{M}$ to a function of the Hessian of {\color{red}$\pi(\bm{q})$}.\\
  $\implies$ need second order \verb0autodiff0. They're working on it.
 \end{frame}
 
