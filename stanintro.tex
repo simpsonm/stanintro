@@ -147,7 +147,7 @@ Long integration time $\implies$ $\approx$ zero autocorrelation in the chain.\\~
 (Picture stolen from \url{https://arxiv.org/pdf/1601.00225.pdf})
 \end{frame}
 
-\begin{frame}{fragile}
+\begin{frame}[fragile]
 \frametitle{HMC in Practice}
 To implement HMC for a \textbf{differentiable} target ${\color{red}\pi(\bm{q})}$ you need:
 \vspace{0.2cm}
@@ -327,7 +327,7 @@ for $i=1,2,\dots,N$, with independent priors:
 \begin{align*}
 \alpha &\sim \mathrm{Cauchy}(100, 1000^2),\\
 \beta_k&\stackrel{iid}{\sim} \mathrm{N}(10, 100^2),\\
-\sigma&\sim \mathrm{half-T}_{d_{\sigma}}(0, 100^2).
+\sigma&\sim \mathrm{half-T}_{5}(0, 100^2).
 \end{align*}
 \end{frame}
 
@@ -390,6 +390,7 @@ model {
 }
 \end{verbatim}
 \end{frame}
+
 
 \begin{frame}[fragile]
 \frametitle{Defining variables}
@@ -624,7 +625,7 @@ Chain 4, Iteration: 4000 / 4000 [100%]  (Sampling)
 \frametitle{Traceplots}
 \verb0> traceplot(regfit, pars = c("alpha", "beta"))0
 \begin{center}
-\includegraphics[width = 0.99\textwidth]{new/traceplot1.png}
+\includegraphics[width = 0.99\textwidth]{code/traceplot1.png}
 \end{center}
 \end{frame}
 
@@ -636,7 +637,7 @@ Chain 4, Iteration: 4000 / 4000 [100%]  (Sampling)
 \end{verbatim}
 }
 \begin{center}
-\includegraphics[width = 0.99\textwidth]{new/traceplot2.png}
+\includegraphics[width = 0.99\textwidth]{code/traceplot2.png}
 \end{center}
 \end{frame}
 
@@ -922,14 +923,6 @@ generated quantities {
   // create any other variables you want draws for here
 }
 \end{verbatim}}
-\end{frame}
-
-\begin{frame}[fragile]
-\frametitle{Program Block Characteristics}
-\begin{center}
-\includegraphics[width = 0.99\textwidth]{blockchars.png}
-\end{center}
-Stolen from \url{http://mlss2014.hiit.fi/mlss_files/2-stan.pdf}
 \end{frame}
 
 \begin{frame}[fragile]
