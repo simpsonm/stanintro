@@ -5,17 +5,17 @@ set.seed(234234)
 n <- 100
 alpha <- 150
 beta <- c(0.05, 100, -.003)
-x <- cbind(runif(n, -1, 1)*100, rnorm(n)/10 + 10, rgamma(n, 1, 1/100))
+x <- cbind(runif(n, -100, 100), rnorm(n, 10, 1/10), rgamma(n, 1, 1/100))
 sigma <- 10
-ses <- 10*rep(sigma, n)
+standard.errors <- rep(10*sigma, n)
 theta <- rnorm(n, alpha + x%*%beta, sigma)
-y <- rnorm(n, theta, ses)
+y <- rnorm(n, theta, standard.errors)
 
 ## create list of all variables in the data block
 regdat <- list(n_obs = n, n_cov = length(beta), y = y, x = x,
                alpha_prior_loc = 100, alpha_prior_scale = 1000,
                beta_prior_mn = 10, beta_prior_sd = 100,
-               sig_prior_df = 5, sig_prior_scale = 100)
+               sigma_prior_df = 5, sigma_prior_scale = 100)
 
 ## initialize the model; takes 15-30 seconds
 regfit0 <- stan("regression.stan", data = regdat, chains = 1, iter = 1)
@@ -50,7 +50,7 @@ regcsfit <- stan(fit = regcsfit0, data = regdat, cores = 4, chains = 4,
 regerrordat <- list(n_obs = n, n_cov = length(beta), y = y, x = x, y_se = ses,
                     alpha_prior_loc = 0, alpha_prior_scale = 10,
                     beta_prior_mn = 0, beta_prior_sd = 10,
-                    sig_prior_df = 5, sig_prior_scale = 10)
+                    sigma_prior_df = 5, sigma_prior_scale = 10)
 
 
 regerrorfit0 <- stan("reg_error.stan", data = regerrordat, chains = 1, iter = 1)

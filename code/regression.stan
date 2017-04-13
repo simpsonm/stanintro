@@ -7,8 +7,8 @@ data {
   real<lower = 0> beta_prior_sd;
   real alpha_prior_loc;
   real<lower = 0> alpha_prior_scale;
-  real<lower = 0> sig_prior_scale;
-  real<lower = 0> sig_prior_df;
+  real<lower = 0> sigma_prior_scale;
+  real<lower = 0> sigma_prior_df;
 }
 parameters {
   real alpha;
@@ -19,5 +19,5 @@ model {
   y ~ normal(alpha + x*beta, sigma);
   alpha ~ cauchy(alpha_prior_loc, alpha_prior_scale);
   beta ~ normal(beta_prior_mn, beta_prior_sd);
-  sigma ~ student_t(sig_prior_df, 0, sig_prior_scale);
+  sigma ~ student_t(sigma_prior_df, 0, sigma_prior_scale);
 }

@@ -8,8 +8,8 @@ data {
   real<lower = 0> beta_prior_sd;
   real alpha_prior_loc;
   real<lower = 0> alpha_prior_scale;
-  real<lower = 0> sig_prior_scale;
-  real<lower = 0> sig_prior_df;
+  real<lower = 0> sigma_prior_scale;
+  real<lower = 0> sigma_prior_df;
 }
 transformed data {
   vector[n_obs] y_cs;
@@ -42,7 +42,7 @@ model {
   theta_cs ~ normal(alpha_cs + x_cs*beta_cs, sigma_cs);
   beta_cs ~ normal(beta_prior_mn, beta_prior_sd);
   alpha_cs ~ cauchy(alpha_prior_loc, alpha_prior_scale);
-  sigma_cs ~ student_t(sig_prior_df, 0, sig_prior_scale);
+  sigma_cs ~ student_t(sigma_prior_df, 0, sigma_prior_scale);
 }
 generated quantities {
   real alpha;

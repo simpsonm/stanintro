@@ -7,8 +7,8 @@ data {
   real<lower = 0> beta_prior_sd;
   real alpha_prior_loc;
   real<lower = 0> alpha_prior_scale;
-  real<lower = 0> sig_prior_scale;
-  real<lower = 0> sig_prior_df;
+  real<lower = 0> sigma_prior_scale;
+  real<lower = 0> sigma_prior_df;
 }
 transformed data {
   vector[n_obs] y_cs;
@@ -22,7 +22,7 @@ transformed data {
   vector<lower = 0>[n_cov] beta_cs_prior_sd;
   real alpha_cs_prior_loc;
   real<lower = 0> alpha_cs_prior_scale;
-  real<lower = 0> sig_cs_prior_scale;
+  real<lower = 0> sigma_cs_prior_scale;
   // center and scale y
   y_mn = mean(y);
   y_sd = sd(y);
@@ -39,7 +39,7 @@ transformed data {
   beta_cs_prior_sd = x_sd * beta_prior_sd / y_sd;
   alpha_cs_prior_loc = (alpha_prior_loc - y_mn) / y_sd;
   alpha_cs_prior_scale = alpha_prior_scale / y_sd;
-  sig_cs_prior_scale = sig_prior_scale / y_sd;
+  sigma_cs_prior_scale = sigma_prior_scale / y_sd;
 }
 parameters {
   real alpha_cs;
@@ -50,7 +50,7 @@ model {
   y_cs ~ normal(alpha_cs + x_cs*beta_cs, sigma_cs);
   beta_cs ~ normal(beta_cs_prior_mn, beta_cs_prior_sd);
   alpha_cs ~ cauchy(alpha_cs_prior_loc + dot_product(x_mnsd, beta_cs), alpha_cs_prior_scale);
-  sigma_cs ~ student_t(sig_prior_df, 0, sig_cs_prior_scale);
+  sigma_cs ~ student_t(sigma_prior_df, 0, sigma_cs_prior_scale);
 }
 generated quantities {
   real alpha;
