@@ -330,6 +330,7 @@ Generative model for fake data:
 y_i \stackrel{ind}{\sim} \mathrm{N}(\theta_i, s_i^2), && \theta_i \stackrel{ind}{\sim} \mathrm{N}(\alpha + \bm{x}_i'\bm{\beta}, \sigma^2) && \mbox{ for } i=1,2,\dots,N.
 \end{align*}
 From \verb0stanintro.R0:
+
 {\tiny
 \begin{verbatim}
 n <- 100
@@ -342,6 +343,7 @@ theta <- rnorm(n, alpha + x%*%beta, sigma)
 y <- rnorm(n, theta, standard.errors)
 \end{verbatim}
 }
+
 
 Regression model ignoring observation errors:
 \begin{align*}
@@ -522,9 +524,12 @@ Define the model in terms of parameters and data. \verb0regression.stan0:
   beta ~ normal(beta_prior_mn, beta_prior_sd);
   sigma ~ student_t(sigma_prior_df, 0, sigma_prior_scale);
 \end{verbatim}
-Each sampling statement (`\verb0~0') adds the relevant quantity to the target log-density. The LHS must be a previously defined variable (data, parameter, transformed data, or transformed parameter blocks).\\~\\
+Each sampling statement (`$\sim$') defines a log-density for the LHS variable. The sum of these log-densities is the target log-density.\\~\\
 
-\textbf{The LHS cannot be an arbitrary function of a variable.}\\~\\
+\textbf{\color{red}The LHS must be a previously defined variable.}\\
+\begin{itemize}
+\item \textbf{If the LHS is a transformation, you need the Jacobian.}\\~\\
+\end{itemize}
 
 Use transformed data/parameters blocks to solve this (more later).
 \end{frame}
@@ -835,6 +840,10 @@ Transformed data: transform once before running MCMC.\\~\\
 Transformed parameters: transform once per leapfrog step.\\~\\
 
 For example:
+\begin{columns}
+\begin{column}{0.3\textwidth}
+\end{column}
+\begin{column}{0.7\textwidth}
 {\tiny
 \begin{verbatim}
 data {
@@ -844,19 +853,22 @@ transformed data {
   vector[n_obs] log_y;
   log_y = log(y);
 }
-parameters = {
+parameters {
   ...
 }
 transformed parameters {
-  real<lower = 0> sigma;
-  sigma = sqrt(sigma2);
+  real<lower = 0> sigma2;
+  sigma2 = sigma^2;
 }
 model {
   log_y ~ normal(mu, sigma);
+  sigma^2 ~ inv_gamma(a, b);
   ...
 }
 \end{verbatim}
 }
+\end{column}
+\end{columns}
 \end{frame}
 
 \begin{frame}[fragile]
@@ -868,6 +880,10 @@ Model block:
 \end{itemize}
 {\tiny
 \begin{verbatim}
+parameters {
+  real mu;
+  real<lower = 0> sigma2;
+}
 model {
   real sigma;
   sigma = sqrt(sigma2);
@@ -901,7 +917,7 @@ generated quantities {
 \end{itemize}
 \textbf{Transformed parameters block:}
 \begin{itemize}
-\item Only place to put transformations to automatically take into account the Jacobian.
+\item Only place to put parameter transformations to automatically take into account the Jacobian.
 \item \textbf{\color{red}Any quantity that is a function of parameters and on the LHS of a sampling statement ($\sim$) must go here.}
 \item Avoid putting other quantities here because computing Jacobians is slow and unnecessary.
 \end{itemize}
@@ -1077,12 +1093,12 @@ In a nutshell: these posterior distributions have weird geometries.
 \item Gibbs samplers have high autocorrelation.
 \item Random Walk Metropolis samplers have small step sizes.
 \item HMC more likely to have divergent transitions.
-\item Geometric ergodicity typically fails \textbf{\emph{using any method}}.\\~\\
+\item Geometric ergodicity often fails \textbf{\emph{using any method}}.\\~\\
 \end{itemize}
 How to fix this?
 \begin{itemize}
-\item Gibbs: reparameterize, parameter expansion, interweaving.
-\item HMC: reparameterize, decrease step size, Riemannian HMC.
+\item Gibbs: \textbf{reparameterize}, parameter expansion, interweaving.
+\item HMC: \textbf{reparameterize}, decrease step size, Riemannian HMC.
 \end{itemize}
 \end{frame}
 
@@ -1152,12 +1168,12 @@ From \textbf{HMC for Hierarchical Models}: \\
 Good Riemannian HMC deals with all of this without user input.\\~\\
 
 Momentum distribution $\bm{p}|\bm{q} \sim \mathrm{N}(\bm{0}, \bm{M}(\bm{q}))$.\\~\\
-From the manual:
+Setting $\bm{M}$ to a function of the Hessian of $\log {\color{red}\pi(\bm{q})}$ works well.\\
+ $\implies$ need second order \verb0autodiff0. They're working on it:\\~\\
+
 \begin{center}
 \includegraphics[width=0.5\textwidth]{stanfuture.png}
 \end{center}
-Good results from setting $\bm{M}$ to a function of the Hessian of {\color{red}$\pi(\bm{q})$}.\\
- $\implies$ need second order \verb0autodiff0. They're working on it.
 \end{frame}
 
 \begin{frame}
