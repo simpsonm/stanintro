@@ -237,18 +237,38 @@ The short answer:
 We are interested in expecations of the form $\int f(\bm{q}){\color{red}\pi(\bm{q})}d\bm{q}$.
 \begin{itemize}
 \item Naively: focus on areas where ${\color{red}\pi(\bm{q})}$ (density) is large.
-\item Better: where where ${\color{red}\pi(\bm{q})}d\bm{q}$ (mass) is large; ``typical set.''
+\item Better: where ${\color{red}\pi(\bm{q})}d\bm{q}$ (mass) is large --- the \emph{\textbf{\color{red} typical set}}:
 \end{itemize}
 \begin{center}
-Typical Set:\\
 \includegraphics[height=0.4\textheight]{typicalset.png}
 \end{center}
-In high dimensions, this is essentially a surface.
+In high dimensions, this is a thin shell \emph{around} the mode.
 \begin{itemize}
 \item Random walk methods have to take tiny steps.
 \item Gibbs methods take a long time to move around the surface.
 \item Modes are far away from mass $\to$ mode-based methods fail.
+\item HMC moves \emph{around} the typical set.
 \end{itemize}
+\end{frame}
+
+\begin{frame}
+\frametitle{Intuition for the Typical Set}
+Typical set: smallest volume region with $1 - \epsilon$ probability.\\~\\
+
+Why is it a shell? Concentration of measure.
+\begin{itemize}
+\item Given $n$ random variables, it is unlikely for all of them to be near their respective averages when $n$ is large.\\~\\
+\end{itemize}
+
+Consider $z_i \stackrel{iid}{\sim} \mathrm{N}(0, 1)$, $i = 1,2,\dots, n$; $\bm{z} = (z_1,z_2,\dots,z_n)$.
+\begin{itemize}
+\item The distance between $\bm{z}$ and its mean is $d = \sqrt{\sum_{i=1}^nz_i^2}$.
+\item $d\sim\chi_n$, $d^2\sim\chi^2_n$, and $\mathrm{E}[d^2] = n$.
+\end{itemize}
+\begin{center}
+\includegraphics[width = \textwidth]{code/chiplot.png}
+\end{center}
+More: {\scriptsize \url{http://mc-stan.org/documentation/case-studies/curse-dims.html}}
 \end{frame}
 
 \begin{frame}
@@ -262,7 +282,7 @@ When geometric ergodicity fails, HMC often won't sample due to numerically infin
 \includegraphics[height = 0.4\textheight]{divergent.png}
 \end{center}
 \begin{itemize}
-\item Caused by weird posterior geometries (reparameterize).
+\item Caused by weird posterior geometries.
 \item Common in hierarchical models.
 \item Also a problem in Gibbs samplers, but they still give output.
 \end{itemize}
@@ -305,29 +325,31 @@ A shorter intro with a different emphasis:
 \frametitle{Using Stan: A Simple Example}
 Running example: regression with observation errors.\\~\\
 
-Fake data generated in \verb0stanintro.R0:
+Generative model for fake data:
+\begin{align*}
+y_i \stackrel{ind}{\sim} \mathrm{N}(\theta_i, s_i^2), && \theta_i \stackrel{ind}{\sim} \mathrm{N}(\alpha + \bm{x}_i'\bm{\beta}, \sigma^2) && \mbox{ for } i=1,2,\dots,N.
+\end{align*}
+From \verb0stanintro.R0:
 {\tiny
 \begin{verbatim}
 n <- 100
 alpha <- 150
 beta <- c(0.05, 100, -.003)
-x <- cbind(runif(n, -1, 1)*100, rnorm(n)/10 + 10, rgamma(n, 1, 1/100))
+x <- cbind(runif(n, -100, 100), rnorm(n, 10, 1/10), rgamma(n, 1, 1/100))
 sigma <- 10
-ses <- 10*rep(sigma, n)
+standard.errors <- rep(10*sigma, n)
 theta <- rnorm(n, alpha + x%*%beta, sigma)
-y <- rnorm(n, theta, ses)
+y <- rnorm(n, theta, standard.errors)
 \end{verbatim}
 }
 
-Start by ignoring observation errors:
+Regression model ignoring observation errors:
 \begin{align*}
-y_i \stackrel{ind}{\sim} \mathrm{N}(\alpha + \bm{x}_i'\bm{\beta}, \sigma^2)
+y_i \stackrel{ind}{\sim} \mathrm{N}(\alpha + \bm{x}_i'\bm{\beta}, \sigma^2) && \mbox{ for } i=1,2,\dots,N
 \end{align*}
-for $i=1,2,\dots,N$, with independent priors:
+with independent priors:
 \begin{align*}
-\alpha &\sim \mathrm{Cauchy}(100, 1000^2),\\
-\beta_k&\stackrel{iid}{\sim} \mathrm{N}(10, 100^2),\\
-\sigma&\sim \mathrm{half-T}_{5}(0, 100^2).
+\alpha \sim \mathrm{T}_1(100, 1000^2), && \beta_k&\stackrel{iid}{\sim} \mathrm{N}(10, 100^2), &&\sigma \sim \mathrm{half-T}_{5}(0, 100^2).
 \end{align*}
 \end{frame}
 
@@ -402,8 +424,7 @@ or at the beginning of any code chunk (\verb0{...}0).\\~\\
 \item Can define arrays of \verb0int0s or \verb0real0s... or vectors or whatever.
 \item Must define every variable that Stan will use.
 \item Arrays, vectors, and matrices must have defined dimensions.
-\item Can (and should) specify any relevant bounds for all variables (error checking \& more).
-\item Stan uses \verb0R0 style 1-based indexing.\\~\\
+\item Can (and should) specify any relevant bounds for all variables (error checking \& more).\\~\\
 \end{itemize}
 Basic syntax: \verb0int n;0 or \verb0real y;0.
 \end{frame}
@@ -464,8 +485,8 @@ data {
   real<lower = 0> beta_prior_sd;
   real alpha_prior_loc;
   real<lower = 0> alpha_prior_scale;
-  real<lower = 0> sig_prior_scale;
-  real<lower = 0> sig_prior_df;
+  real<lower = 0> sigma_prior_scale;
+  real<lower = 0> sigma_prior_df;
 }
 \end{verbatim}
 This block \emph{only} consists of variable definitions.\\~\\
@@ -499,7 +520,7 @@ Define the model in terms of parameters and data. \verb0regression.stan0:
   y ~ normal(alpha + x*beta, sigma);
   alpha ~ cauchy(alpha_prior_loc, alpha_prior_scale);
   beta ~ normal(beta_prior_mn, beta_prior_sd);
-  sigma ~ student_t(sig_prior_df, 0, sig_prior_scale);
+  sigma ~ student_t(sigma_prior_df, 0, sigma_prior_scale);
 \end{verbatim}
 Each sampling statement (`\verb0~0') adds the relevant quantity to the target log-density. The LHS must be a previously defined variable (data, parameter, transformed data, or transformed parameter blocks).\\~\\
 
@@ -563,7 +584,7 @@ Fitting a regression:
 regdat <- list(n_obs = n, n_cov = length(beta), y = y, x = x,
                alpha_prior_loc = 100, alpha_prior_scale = 1000,
                beta_prior_mn = 10, beta_prior_sd = 100,
-               sig_prior_df = 5, sig_prior_scale = 100)
+               sigma_prior_df = 5, sigma_prior_scale = 100)
 
 ## initialize the model; takes 15-30 seconds
 regfit0 <- stan("regression.stan", data = regdat, chains = 1, iter = 1)
@@ -773,7 +794,7 @@ transformed data {
   beta_cs_prior_sd = x_sd * beta_prior_sd / y_sd;
   alpha_cs_prior_loc = (alpha_prior_loc-y_mn)/y_sd;
   alpha_cs_prior_scale = alpha_prior_scale / y_sd;
-  sig_cs_prior_scale = sig_prior_scale / y_sd;
+  sigma_cs_prior_scale = sigma_prior_scale / y_sd;
 }
 \end{verbatim}
 \end{column}
@@ -788,7 +809,7 @@ model {
   y_cs ~ normal(alpha_cs + x_cs*beta_cs, sigma_cs);
   beta_cs ~ normal(beta_cs_prior_mn, beta_cs_prior_sd);
   alpha_cs ~ cauchy(alpha_cs_prior_loc + dot_product(x_mnsd, beta_cs), alpha_cs_prior_scale);
-  sigma_cs ~ student_t(sig_prior_df, 0, sig_cs_prior_scale);
+  sigma_cs ~ student_t(sigma_prior_df, 0, sigma_cs_prior_scale);
 }
 generated quantities {
   real alpha;
@@ -983,7 +1004,7 @@ model {
   theta_cs ~ normal(alpha_cs + x_cs*beta_cs, sigma_cs);
   beta_cs ~ normal(beta_prior_mn, beta_prior_sd);
   alpha_cs ~ cauchy(alpha_prior_loc, alpha_prior_scale);
-  sigma_cs ~ student_t(sig_prior_df, 0, sig_prior_scale);
+  sigma_cs ~ student_t(sigma_prior_df, 0, sigma_prior_scale);
 }
 \end{verbatim}
 }
@@ -996,7 +1017,7 @@ model {
 > regerrordat <- list(n_obs = n, n_cov = length(beta), y = y, x = x, y_se = ses,
 +                     alpha_prior_loc = 0, alpha_prior_scale = 10,
 +                     beta_prior_mn = 0, beta_prior_sd = 10,
-+                     sig_prior_df = 5, sig_prior_scale = 10)
++                     sigma_prior_df = 5, sigma_prior_scale = 10)
 > regerrorfit <- stan(fit = regerrorfit0, data = regerrordat, cores = 4, chains = 4,
                       warmup = 2000, iter = 4000, open_progress = FALSE)
 Warning messages:
@@ -1105,7 +1126,7 @@ model {
   theta_cs_raw ~ normal(0, 1);
   beta_cs ~ normal(beta_prior_mn, beta_prior_sd);
   alpha_cs ~ cauchy(alpha_prior_loc, alpha_prior_scale);
-  sigma_cs ~ student_t(sig_prior_df, 0, sig_prior_scale);
+  sigma_cs ~ student_t(sigma_prior_df, 0, sigma_prior_scale);
 }
 \end{verbatim}}
 No divergent transitions or low BFMI with this parameterization.
