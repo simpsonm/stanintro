@@ -80,7 +80,7 @@ Markov Chain Monte Carlo}
 
 \begin{frame}
 \frametitle{Markov chain Monte Carlo (MCMC)}
-Goal: sample from some target density ${\color{red}\pi(\bm{q})}$.\\
+Goal: sample from some target density ${\color{blue}\pi(\bm{q})}$.\\
 
 \vspace{0.5cm}
 
@@ -90,43 +90,37 @@ Create a Markov chain with transition density $k(\bm{q}'|\bm{q})$.
 
 \vspace{0.2cm}
 
-\item Under some conditions $\bm{q}^{(t)} \to \bm{q}$ in distribution.
-
-\vspace{0.2cm}
-
-\item Additionally with {\color{red}geometric ergodicity}:
+\item Under easy conditions $k(\cdot|\cdot)$ is {\color{red}ergodic}, $\bm{q}^{(t)} \to {\color{blue}\pi(\bm{q})}$, and
 \begin{align*}
-  \frac{1}{T}\sum_{t=1}^T f(\bm{q}^{(t)}) \to \mathrm{N}\left(\mathrm{E}[f(\bm{q})], \frac{\mathrm{var}[f(\bm{q})]}{ESS}\right).
+  \frac{1}{T}\sum_{t=1}^T f(\bm{q}^{(t)}) \to \mathrm{\color{blue}E}_{\color{blue}\pi}[f(\bm{q})]&& \mbox{ almost surely.}
 \end{align*}
-\end{itemize}
 
-\vspace{0.5cm}
-
-Auxillary variable MCMC: construct a variable $\bm{p}$ with joint density $\pi(\bm{q},\bm{p}) = \pi(\bm{p}|\bm{q}){\color{red}\pi(\bm{q})}$.
-\begin{itemize}
-\item Construct a Markov chain for $(\bm{q}, \bm{p})$ and throw away the sampled $\bm{p}^{(t)}$s.
 \vspace{0.2cm}
-\item Ex: data augmentation, slice sampling, HMC, etc.
+
+\item Additionally if $k(\cdot|\cdot)$ is {\color{red}geometric ergodic}:
+\begin{align*}
+  \frac{1}{T}\sum_{t=1}^T f(\bm{q}^{(t)}) \to \mathrm{N}\left(\mathrm{\color{blue}E}_{\color{blue}\pi}[f(\bm{q})], \frac{\mathrm{\color{blue}var}_{\color{blue}\pi}[f(\bm{q})]}{ESS}\right).
+\end{align*}
 \end{itemize}
 \end{frame}
 
 \begin{frame}
 \frametitle{HMC in Theory}
-Construct $\bm{p}$ in a special way. Let $\bm{q},\bm{p}\in \Re^n$ and:
+Let ${\color{blue}\pi(\bm{q})}>0$ for all ${\bm{q}}\in\Re^n$. Construct auxillary variable $\bm{p}\in\Re^n$.
 \begin{itemize}
-\item[] $V(\bm{q})\phantom{,\bm{p}} = -\log {\color{red}\pi(\bm{q})}$ --- \emph{potential energy}.
-\item[] $T(\bm{q}, \bm{p}) = - \log \pi(\bm{p} | \bm{q})$ --- \emph{kinetic energy}.
-\item[] $H(\bm{q}, \bm{p}) = V(\bm{q}) + T(\bm{q}, \bm{p})$ --- \emph{Hamiltonian}, total energy.
+\item[] $V({\bm{q}})\phantom{,\bm{p}} = -\log {\color{blue}\pi(\bm{q})}$ --- \emph{potential energy}.
+\item[] $T({\bm{q}}, \bm{p}) = - \log \pi(\bm{p} | {\bm{q}})$ --- \emph{kinetic energy}.
+\item[] $H({\bm{q}}, \bm{p}) = V({\bm{q}}) + T({\bm{q}}, \bm{p})$ --- \emph{Hamiltonian}, total energy.
 \end{itemize}
-where $\bm{q}$ denotes {\color{red}\emph{position}} and $\bm{p}$ denotes {\color{red}\emph{momentum}}.
+where ${\bm{q}}$ denotes {\color{red}\emph{position}} and $\bm{p}$ denotes {\color{red}\emph{momentum}}.
 
 \vspace{0.3cm}
 
 Energy-preserving evolution in time is defined by Hamilton's equations:
 \begin{align*}
-\frac{\mathrm{d}\bm{p}}{\mathrm{d} t} = - \frac{\partial H}{\partial \bm{q}}; && \frac{\mathrm{d}\bm{q}}{\mathrm{d} t} = + \frac{\partial H}{\partial \bm{p}}.
+\frac{\mathrm{d}\bm{p}}{\mathrm{d} t} = - \frac{\partial H}{\partial {\bm{q}}}; && \frac{\mathrm{d}{\bm{q}}}{\mathrm{d} t} = + \frac{\partial H}{\partial \bm{p}}.
 \end{align*}
-How to implement HMC (in theory):
+How to implement HMC in theory:
 \begin{enumerate}
 \item Sample momenta variables: $\bm{p}' \sim \pi(\bm{p}|\bm{q}^{(t)})$.
 \item Run Hamiltonian evolution forward in time from $(\bm{q}^{(t)}, \bm{p}')$ for a some amount of {\color{red}\emph{integration time}} to obtain $(\bm{q}^{(t+1)}, \bm{p}^{(t+1)})$.
@@ -149,7 +143,7 @@ Long integration time $\implies$ $\approx$ zero autocorrelation in the chain.\\~
 
 \begin{frame}[fragile]
 \frametitle{HMC in Practice}
-To implement HMC for a \textbf{differentiable} target ${\color{red}\pi(\bm{q})}$ you need:
+To implement HMC for a \textbf{differentiable} target ${\color{blue}\pi(\bm{q})}$ you need:
 \vspace{0.2cm}
 \begin{enumerate}
 \item No discrete valued parameters in $\bm{q}$.
@@ -162,14 +156,14 @@ To implement HMC for a \textbf{differentiable} target ${\color{red}\pi(\bm{q})}$
 \item Stan: transform and compute the log-Jacobian automatically.
 \end{itemize}
 \vspace{0.2cm}
-\item The gradient vector of $\log {\color{red}\pi(\bm{q})}$.
+\item The gradient vector of $\log {\color{blue}\pi(\bm{q})}$.
 \begin{itemize}
 \item Stan: use C++ autodiff library to do this automatically and accurately.
 \end{itemize}
 \vspace{0.2cm}
 \item Choose a kinetic energy, i.e. $\pi(\bm{p}|\bm{q})$.
 \begin{itemize}
-\item Stan: $\mathrm{N}(\bm{0}, \bm{M})$ and tune $\bm{M}$ during warmup. (Typical HMC)
+\item Stan: $\mathrm{N}(\bm{0}, \bm{M})$ and tune $\bm{M}$ during warmup. (Euclidean HMC)
 \item More intelligent: $\bm{M}(\bm{q})$. (Riemannian HMC; future Stan)
 \end{itemize}
 \end{enumerate}
@@ -180,16 +174,16 @@ To implement HMC for a \textbf{differentiable} target ${\color{red}\pi(\bm{q})}$
 
 \begin{frame}
 \frametitle{HMC in Practice (continued)}
-To implement HMC for a \textbf{differentiable} target ${\color{red}\pi(\bm{q})}$ you need:
+To implement HMC for a \textbf{differentiable} target ${\color{blue}\pi(\bm{q})}$ you need:
 \vspace{0.2cm}
 \begin{enumerate}
 \item[5.] Numerical integrator for Hamilton's equations.
 \begin{itemize}
 \item Need to make an adjustment to the Hamiltonian flow and use a Metropolis correction to ensure detailed balance.
 \vspace{0.2cm}
-\item Typically use leapfrog integration $\implies$ how many leapfrog steps?
+\item Use leapfrog integration $\implies$ how many leapfrog steps?
 \vspace{0.2cm}
-\item Stan: adapt number of steps to hit a target Metropolis acceptance rate.
+\item Stan: adapt number of leapfrog steps to hit a target Metropolis acceptance rate --- default is 80\%.
 \end{itemize}
 \vspace{0.2cm}
 \item[6.] An integration time. How long is long enough?
@@ -234,10 +228,10 @@ The short answer:
 
 \begin{frame}
 \frametitle{Works in high dimensions}
-We are interested in expecations of the form $\int f(\bm{q}){\color{red}\pi(\bm{q})}d\bm{q}$.
+Interested in expectations of the form ${\color{blue}\mathrm{E}}_{\color{blue}\pi}[f(\bm{q})] = \int f(\bm{q}){\color{blue}\pi(\bm{q})}d\bm{q}$.
 \begin{itemize}
-\item Naively: focus on areas where ${\color{red}\pi(\bm{q})}$ (density) is large.
-\item Better: where ${\color{red}\pi(\bm{q})}d\bm{q}$ (mass) is large --- the \emph{\textbf{\color{red} typical set}}:
+\item Naively: focus on areas where ${\color{blue}\pi(\bm{q})}$ (density) is large.
+\item Better: where ${\color{blue}\pi(\bm{q})}d\bm{q}$ (mass) is large --- the \emph{\textbf{\color{red} typical set}}:
 \end{itemize}
 \begin{center}
 \includegraphics[height=0.4\textheight]{typicalset.png}
@@ -246,24 +240,24 @@ In high dimensions, this is a thin shell \emph{around} the mode.
 \begin{itemize}
 \item Random walk methods have to take tiny steps.
 \item Gibbs methods take a long time to move around the surface.
-\item Modes are far away from mass $\to$ mode-based methods fail.
+\item Modes are far from mass $\to$ mode-based methods may fail.
 \item HMC moves \emph{around} the typical set.
 \end{itemize}
 \end{frame}
 
 \begin{frame}
 \frametitle{Intuition for the Typical Set}
-Typical set: smallest volume region with $1 - \epsilon$ probability.\\~\\
+Typical set: smallest volume set with $1 - \epsilon$ probability.\\~\\
 
 Why is it a shell? Concentration of measure.
 \begin{itemize}
-\item Given $n$ random variables, it is unlikely for all of them to be near their respective averages when $n$ is large.\\~\\
+\item Given $n$ random variables, it is unlikely for all of them to be near their respective typical values when $n$ is large.\\~\\
 \end{itemize}
 
 Consider $z_i \stackrel{iid}{\sim} \mathrm{N}(0, 1)$, $i = 1,2,\dots, n$; $\bm{z} = (z_1,z_2,\dots,z_n)$.
 \begin{itemize}
-\item The distance between $\bm{z}$ and its mean is $d = \sqrt{\sum_{i=1}^nz_i^2}$.
-\item $d\sim\chi_n$, $d^2\sim\chi^2_n$, and $\mathrm{E}[d^2] = n$.
+\item The distance between $\bm{z}$ and its mode is $d = \sqrt{\sum_{i=1}^nz_i^2}$.
+\item $d^2\sim\chi^2_n$ and $d\sim\chi_n$.
 \end{itemize}
 \begin{center}
 \includegraphics[width = \textwidth]{code/chiplot.png}
@@ -273,7 +267,7 @@ More: {\scriptsize \url{http://mc-stan.org/documentation/case-studies/curse-dims
 
 \begin{frame}
 \frametitle{Robustness and Noisy Failure}
-HMC has guaranteed geometric ergodicity in a larger class of target densities than alternatives.
+HMC has guaranteed geometric ergodicity in a larger class of target densities than alternatives. {\scriptsize \url{https://arxiv.org/pdf/1601.08057.pdf}}
 
 \vspace{0.5cm}
 
@@ -1168,7 +1162,7 @@ From \textbf{HMC for Hierarchical Models}: \\
 Good Riemannian HMC deals with all of this without user input.\\~\\
 
 Momentum distribution $\bm{p}|\bm{q} \sim \mathrm{N}(\bm{0}, \bm{M}(\bm{q}))$.\\~\\
-Setting $\bm{M}$ to a function of the Hessian of $\log {\color{red}\pi(\bm{q})}$ works well.\\
+Setting $\bm{M}$ to a function of the Hessian of $\log {\color{blue}\pi(\bm{q})}$ works well.\\
  $\implies$ need second order \verb0autodiff0. They're working on it:\\~\\
 
 \begin{center}
