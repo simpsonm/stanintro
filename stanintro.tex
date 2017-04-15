@@ -856,7 +856,7 @@ transformed parameters {
 }
 model {
   log_y ~ normal(mu, sigma);
-  sigma^2 ~ inv_gamma(a, b);
+  sigma2 ~ inv_gamma(a, b);
   ...
 }
 \end{verbatim}
