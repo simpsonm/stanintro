@@ -84,20 +84,20 @@ Goal: sample from some target density ${\color{blue}\pi(\bm{q})}$.\\
 
 \vspace{0.5cm}
 
-Create a Markov chain with transition density $k(\bm{q}'|\bm{q})$.
+Create a Markov chain with Markov transition density $k(\bm{q}'|\bm{q})$.
 \begin{itemize}
 \item Start with arbitrary $\bm{q}^{(0)}$ and repeatedly sample $\bm{q}^{(t+1)} \sim k(\bm{q}'|\bm{q}^{(t)})$.\\
 
 \vspace{0.2cm}
 
-\item Under easy conditions $k(\cdot|\cdot)$ is {\color{red}ergodic}, $\bm{q}^{(t)} \to {\color{blue}\pi(\bm{q})}$, and
+\item Under easy conditions the chain is {\color{red}ergodic}, $\bm{q}^{(t)} \to {\color{blue}\pi(\bm{q})}$, and
 \begin{align*}
   \frac{1}{T}\sum_{t=1}^T f(\bm{q}^{(t)}) \to \mathrm{\color{blue}E}_{\color{blue}\pi}[f(\bm{q})]&& \mbox{ almost surely.}
 \end{align*}
 
 \vspace{0.2cm}
 
-\item Additionally if $k(\cdot|\cdot)$ is {\color{red}geometric ergodic}:
+\item Additionally if the chain is {\color{red}geometric ergodic}:
 \begin{align*}
   \frac{1}{T}\sum_{t=1}^T f(\bm{q}^{(t)}) \to \mathrm{N}\left(\mathrm{\color{blue}E}_{\color{blue}\pi}[f(\bm{q})], \frac{\mathrm{\color{blue}var}_{\color{blue}\pi}[f(\bm{q})]}{ESS}\right).
 \end{align*}
@@ -525,7 +525,12 @@ Each sampling statement (`$\sim$') defines a log-density for the LHS variable. T
 \item \textbf{If the LHS is a transformation, you need the Jacobian.}\\~\\
 \end{itemize}
 
-Use transformed data/parameters blocks to solve this (more later).
+Use transformed data/parameters blocks to solve this (more later).\\~\\
+
+Note: \verb0sigma0 is defined to be $\geq 0$ in the parameters block.
+\begin{itemize}
+\item Stan handles the normalizing constant from the truncation.
+\end{itemize}
 \end{frame}
 
 \begin{frame}[fragile]
