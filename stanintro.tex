@@ -579,6 +579,8 @@ Upshot: vectorize wherever you can (see manual).
 Fitting a regression:
 {\footnotesize
 \begin{verbatim}
+library(rstan)
+
 ## create list of all variables in the data block
 regdat <- list(n_obs = n, n_cov = length(beta), y = y, x = x,
                alpha_prior_loc = 100, alpha_prior_scale = 1000,
@@ -1097,7 +1099,7 @@ How to fix this?
 \end{frame}
 
 \begin{frame}[fragile]
-\frametitle{Centered vs. noncenteredparameterizations}
+\frametitle{Centered vs. noncentered parameterizations}
 \begin{align*}
 y_i &\stackrel{ind}{\sim}\mathrm{N}(\theta_i, s_i^2) && \theta_i \stackrel{ind}{\sim} \mathrm{N}(\alpha + \bm{x}_i'\bm{\beta}, \sigma^2); && \mbox{(centered)}\\
 y_i &\stackrel{ind}{\sim} \mathrm{N}(\alpha + \bm{x}_i'\bm{\beta} + \sigma\varepsilon_{i}, s_i^2), && \varepsilon_i \stackrel{iid}{\sim} \mathrm{N}(0, 1). && \mbox{(noncentered)}\\
