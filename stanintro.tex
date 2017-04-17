@@ -228,10 +228,9 @@ The short answer:
 
 \begin{frame}
 \frametitle{Works in high dimensions}
-Interested in expectations of the form ${\color{blue}\mathrm{E}}_{\color{blue}\pi}[f(\bm{q})] = \int f(\bm{q}){\color{blue}\pi(\bm{q})}d\bm{q}$.
+Probability mass is concentrated on the \emph{\textbf{\color{red} typical set}}
 \begin{itemize}
-\item Naively: focus on areas where ${\color{blue}\pi(\bm{q})}$ (density) is large.
-\item Better: where ${\color{blue}\pi(\bm{q})}d\bm{q}$ (mass) is large --- the \emph{\textbf{\color{red} typical set}}:
+\item the smallest volume set with $1 - \epsilon$ probability.\\~\\
 \end{itemize}
 \begin{center}
 \includegraphics[height=0.4\textheight]{typicalset.png}
@@ -830,7 +829,7 @@ generated quantities {
 \end{column}
 \end{columns}}
 \vspace{.5cm}
-Reduces fit time per chain from 3 minutes to 4 seconds.
+Note: Transformed Data and Generated Quantities Blocks
 \end{frame}
 
 
@@ -965,21 +964,23 @@ generated quantities {
 
 \begin{frame}[fragile]
 \frametitle{Tricks for Better/Faster Samplers in Stan}
+The centered and scaled model reduces fit time per chain from 3 minutes to 4 seconds.\\~\\
+
 HMC/Stan works best when:
 \begin{itemize}
 \item All parameters are on similar scales.
 \item Posterior geometries aren't ``weird''.
+\begin{itemize}
+\item Common in hierarchical models --- more later.
 \end{itemize}
-How to deal with these issues:
+\end{itemize}
+How to put parameters on the same scale.
 \begin{itemize}
 \item Center and scale responses and covariates.
-\item Work on the log scale, e.g. \verb0logy ~ normal(.,.);0 is better than \verb0y ~ lognormal(.,.);0
-\item Reparameterize the model --- noncentered parameterizations.\\~\\
+\item Work on the log scale, e.g. \verb0logy ~ normal(.,.);0 is better than \verb0y ~ lognormal(.,.);0\\~\\
 \end{itemize}
 
-Centering and scaling data often drastically speeds up model fits because it makes adaptation easier.\\~\\
-
-Reparameterization is often necessary to get a working sampler at all, especially in hierarchical models.
+Centering and scaling data often drastically speeds up model fits because it makes adaptation easier.
 \end{frame}
 
 \begin{frame}[fragile]
@@ -1081,7 +1082,7 @@ Divergent transitions after warmup: {\tiny\verb61: There were 119 divergent tran
 
 Lowering the leapfrog step size forces the numerical integrator to follow the local curvature of the target distribution more closely...\\~\\
 
-But this doesn't always work! Reparameterization can solve it.
+But this doesn't always work! Common in hierarchical models!
 \end{frame}
 
 \begin{frame}[fragile]
@@ -1153,12 +1154,13 @@ No divergent transitions or low BFMI with this parameterization.
 \frametitle{Stan vs Gibbs for Hierarchical Models}
 Stan's major advantages:
 \begin{itemize}
+\item Gibbs fails in high dimensions.
 \item Stan tends to let you know when geometric ergodicity fails.
 \item Stan tends to be more efficient.
 \end{itemize}
 \begin{center}
-\includegraphics[width = 0.5\textwidth]{center.png}\\
-\includegraphics[width = 0.9\textwidth]{hmctable.png}
+\includegraphics[width = 0.4\textwidth]{center.png}\\
+\includegraphics[width = 0.8\textwidth]{hmctable.png}
 \end{center}
 From \textbf{HMC for Hierarchical Models}: \\
 \ \ \ \ \ \url{https://arxiv.org/pdf/1312.0906.pdf}
