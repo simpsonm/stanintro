@@ -47,7 +47,7 @@ regcsfit <- stan(fit = regcsfit0, data = regdat, cores = 4, chains = 4,
                  warmup = 2000, iter = 4000, open_progress = FALSE)
 ## about 4 seconds to fit per chain
 
-regerrordat <- list(n_obs = n, n_cov = length(beta), y = y, x = x, y_se = ses,
+regerrordat <- list(n_obs = n, n_cov = length(beta), y = y, x = x, y_se = standard.errors,
                     alpha_prior_loc = 0, alpha_prior_scale = 10,
                     beta_prior_mn = 0, beta_prior_sd = 10,
                     sigma_prior_df = 5, sigma_prior_scale = 10)
