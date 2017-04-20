@@ -86,20 +86,20 @@ Goal: sample from some target density ${\color{blue}\pi(\bm{q})}$.\\
 
 Create a Markov chain with Markov transition density $k(\bm{q}'|\bm{q})$.
 \begin{itemize}
-\item Start with arbitrary $\bm{q}^{(0)}$ and repeatedly sample $\bm{q}^{(t+1)} \sim k(\bm{q}'|\bm{q}^{(t)})$.\\
+\item Start with arbitrary $\bm{q}^{(0)}$ and repeatedly sample $\bm{q}^{(i+1)} \sim k(\bm{q}'|\bm{q}^{(i)})$.\\
 
 \vspace{0.2cm}
 
-\item Under easy conditions the chain is {\color{red}ergodic}, $\bm{q}^{(t)} \to {\color{blue}\pi(\bm{q})}$, and
+\item Under easy conditions the chain is {\color{red}ergodic}, $\bm{q}^{(i)} \to {\color{blue}\pi(\bm{q})}$, and
 \begin{align*}
-  \frac{1}{T}\sum_{t=1}^T f(\bm{q}^{(t)}) \to \mathrm{\color{blue}E}_{\color{blue}\pi}[f(\bm{q})]&& \mbox{ almost surely.}
+  \frac{1}{N}\sum_{i=1}^N f(\bm{q}^{(i)}) \to \mathrm{\color{blue}E}_{\color{blue}\pi}[f(\bm{q})]&& \mbox{ almost surely.}
 \end{align*}
 
 \vspace{0.2cm}
 
-\item Additionally if the chain is {\color{red}geometric ergodic}:
+\item Additionally if the chain is {\color{red}geometrically ergodic}:
 \begin{align*}
-  \frac{1}{T}\sum_{t=1}^T f(\bm{q}^{(t)}) \to \mathrm{N}\left(\mathrm{\color{blue}E}_{\color{blue}\pi}[f(\bm{q})], \frac{\mathrm{\color{blue}var}_{\color{blue}\pi}[f(\bm{q})]}{ESS}\right).
+  \frac{1}{N}\sum_{i=1}^N f(\bm{q}^{(i)}) \to \mathrm{N}\left(\mathrm{\color{blue}E}_{\color{blue}\pi}[f(\bm{q})], \frac{\mathrm{\color{blue}var}_{\color{blue}\pi}[f(\bm{q})]}{ESS}\right).
 \end{align*}
 \end{itemize}
 \end{frame}
@@ -122,8 +122,8 @@ Energy-preserving evolution in time is defined by Hamilton's equations:
 \end{align*}
 How to implement HMC in theory:
 \begin{enumerate}
-\item Sample momenta variables: $\bm{p}' \sim \pi(\bm{p}|\bm{q}^{(t)})$.
-\item Run Hamiltonian evolution forward in time from $(\bm{q}^{(t)}, \bm{p}')$ for a some amount of {\color{red}\emph{integration time}} to obtain $(\bm{q}^{(t+1)}, \bm{p}^{(t+1)})$.
+\item Sample momenta variables: $\bm{p}' \sim \pi(\bm{p}|\bm{q}^{(i)})$.
+\item Run Hamiltonian evolution forward in time from $(\bm{q}^{(i)}, \bm{p}')$ for a some amount of {\color{red}\emph{integration time}} to obtain $(\bm{q}^{(i+1)}, \bm{p}^{(i+1)})$.
 \end{enumerate}
 \end{frame}
 
@@ -1074,7 +1074,7 @@ Divergent transitions after warmup: {\tiny\verb61: There were 119 divergent tran
 \vspace{-0.4cm}
 \begin{itemize}
 \item Indicates that geometric ergodicity is breaking down. \textbf{\emph{Just one divergent transition is enough to be concerning.}}
-\item Solve via reparameterization or increasing \verb0adapt_delta0.\\
+\item Can solve via increasing \verb0adapt_delta0:\\
 \verb0stan(..., control = list(adapt_delta = .99))0\\~\\
 \end{itemize}
 
