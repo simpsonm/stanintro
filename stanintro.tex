@@ -523,12 +523,10 @@ Define the model in terms of parameters and data. \verb0regression.stan0:
 \end{verbatim}
 Each sampling statement (`$\sim$') defines a log-density for the LHS variable. The sum of these log-densities is the target log-density.\\~\\
 
-\textbf{\color{red}The LHS must be a previously defined variable.}\\
+\textbf{\color{red}The LHS must \emph{NOT} be a nonlinear transformation of parameters. If it is, you need the Jacobian.}
 \begin{itemize}
-\item \textbf{If the LHS is a transformation, you need the Jacobian.}\\~\\
+\item Better to write the model in a way that does not use a transformation on the LHS of a sampling statement.\\~\\
 \end{itemize}
-
-Use transformed data/parameters blocks to solve this (more later).\\~\\
 
 Note: \verb0sigma0 is defined to be $\geq 0$ in the parameters block.
 \begin{itemize}
@@ -861,8 +859,8 @@ parameters {
   ...
 }
 transformed parameters {
-  real<lower = 0> sigma2;
-  sigma2 = sigma^2;
+  real<lower = 0> sigma;
+  sigma = sqrt(sigma);
 }
 model {
   log_y ~ normal(mu, sigma);
@@ -917,17 +915,15 @@ generated quantities {
 \frametitle{Where should I put my transformation for max efficiency?}
 \textbf{Transformed data block:}
 \begin{itemize}
-\item All pure functions of data, or other intermediate quantities that don't depend on parameters.
+\item All pure functions of data, or other intermediate quantities that don't depend on parameters.\\~\\
 \end{itemize}
 \textbf{Transformed parameters block:}
 \begin{itemize}
-\item Only place to put parameter transformations to automatically take into account the Jacobian.
-\item \textbf{\color{red}Any quantity that is a function of parameters and on the LHS of a sampling statement ($\sim$) must go here.}
-\item Avoid putting other quantities here because computing Jacobians is slow and unnecessary.
+\item Quantities used on the RHS of sampling statements that you also want MCMC draws for.\\~\\
 \end{itemize}
 \textbf{Model block:}
 \begin{itemize}
-\item Intermediate quantities used on RHS of sampling statements.
+\item Intermediate quantities used on RHS of sampling statements.\\~\\
 \end{itemize}
 \textbf{Generated quantities block:}
 \begin{itemize}
