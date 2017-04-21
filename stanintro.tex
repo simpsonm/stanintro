@@ -24,6 +24,7 @@ epsfig, multicol, amsthm}
 
 \title[Intro to Stan]{Introduction to Stan for \\
 Markov Chain Monte Carlo}
+\date{April 25, 2017}
 
 %\subtitle{}
 \author[Matt Simpson]{Matthew Simpson}
@@ -31,8 +32,10 @@ Markov Chain Monte Carlo}
 
 \begin{document}
 
-\begin{frame}
+\begin{frame}[fragile]
 \titlepage
+
+These slides and accompanying \verb0R0 and Stan files are available at \url{http://stsn.missouri.edu/education-and-outreach.shtml}
 \end{frame}
 
 % \begin{frame}[fragile]
@@ -138,7 +141,8 @@ HMC samples a level set, then moves along that set.\\~\\
 
 Long integration time $\implies$ $\approx$ zero autocorrelation in the chain.\\~\\
 
-(Picture stolen from \url{https://arxiv.org/pdf/1601.00225.pdf})
+{\footnotesize Picture from \textbf{Identifying the Optimal Integration Time in HMC}\\ (Michael Betancourt)
+\url{https://arxiv.org/pdf/1601.00225.pdf}}
 \end{frame}
 
 \begin{frame}[fragile]
@@ -266,7 +270,7 @@ More: {\scriptsize \url{http://mc-stan.org/documentation/case-studies/curse-dims
 
 \begin{frame}
 \frametitle{Robustness and Noisy Failure}
-HMC has guaranteed geometric ergodicity in a larger class of target densities than alternatives. {\scriptsize \url{https://arxiv.org/pdf/1601.08057.pdf}}
+HMC has guaranteed geometric ergodicity in a larger class of target densities than alternatives. {\scriptsize \url{https://arxiv.org/pdf/1601.08057.pdf} \\\textbf{On the Geometric Ergodicity of HMC} (Ligingstone, Betancourt, et. al.) }
 
 \vspace{0.5cm}
 
@@ -1036,6 +1040,7 @@ model {
 +                     alpha_prior_loc = 0, alpha_prior_scale = 10,
 +                     beta_prior_mn = 0, beta_prior_sd = 10,
 +                     sigma_prior_df = 5, sigma_prior_scale = 10)
+> regerrorfit0 <- stan("reg_error.stan", data = regerrordat, chains = 1, iter = 1)
 > regerrorfit <- stan(fit = regerrorfit0, data = regerrordat, cores = 4, chains = 4,
                       warmup = 2000, iter = 4000, open_progress = FALSE)
 Warning messages:

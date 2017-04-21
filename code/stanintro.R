@@ -1,3 +1,6 @@
+## rstan installation instructions:
+## https://github.com/stan-dev/rstan/wiki/RStan-Getting-Started
+## follow them carefully!!
 library(rstan)
 
 ## simulate data with observation errors
